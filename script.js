@@ -1,19 +1,14 @@
-// script.js - Versão para Vercel com API proxy
-
-// Configuração
+// ==================== CONFIGURAÇÃO ====================
 const USERS = {
     admin: { password: 'admin123', role: 'admin' },
     user: { password: 'user123', role: 'user' }
 };
 
+const API_URL = '/api';
 let currentUser = null;
 let agendas = [];
-let solicitacoes = [];
 
-// Usar a API proxy do Vercel
-const API_URL = '/api';
-
-// Inicialização
+// ==================== INICIALIZAÇÃO ====================
 document.addEventListener('DOMContentLoaded', function() {
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
@@ -24,8 +19,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Funções de Login
-function login() {
+// ==================== LOGIN ====================
+function handleLogin(event) {
+    event.preventDefault();
+    
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
     
@@ -68,26 +65,28 @@ function logout() {
     document.getElementById('password').value = '';
 }
 
-// Navegação Admin
-function showTab(tabId) {
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+// ==================== ADMIN - NAVEGAÇÃO ====================
+function switchAdminTab(tab) {
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     
-    document.getElementById(tabId).classList.add('active');
-    const buttons = document.querySelectorAll('.nav-actions .nav-btn');
-    const index = ['novaAgenda', 'listaAgendas', 'solicitacoes'].indexOf(tabId);
-    if (index !== -1 && buttons[index]) {
-        buttons[index].classList.add('active');
-    }
+    const tabMap = {
+        'nova': 'adminNova',
+        'lista': 'adminLista',
+        'solicitacoes': 'adminSolicitacoes'
+    };
     
-    if (tabId === 'listaAgendas') {
-        carregarAgendasAdmin();
-    } else if (tabId === 'solicitacoes') {
-        carregarSolicitacoes();
-    }
+    document.getElementById(tabMap[tab]).classList.add('active');
+    
+    const tabs = document.querySelectorAll('.nav-tab');
+    const index = ['nova', 'lista', 'solicitacoes'].indexOf(tab);
+    if (tabs[index]) tabs[index].classList.add('active');
+    
+    if (tab === 'lista') carregarAgendasAdmin();
+    if (tab === 'solicitacoes') carregarSolicitacoes();
 }
 
-// Funções de Agenda
+// ==================== ADMIN - AGENDAS ====================
 async function criarAgenda(event) {
     event.preventDefault();
     
@@ -104,23 +103,21 @@ async function criarAgenda(event) {
     try {
         const response = await fetch(`${API_URL}/agendas`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
         });
         
         const result = await response.json();
         if (result.success) {
-            showToast('Agenda criada com sucesso!', 'success');
+            showToast('✅ Agenda criada com sucesso!', 'success');
             document.getElementById('agendaForm').reset();
             carregarAgendasAdmin();
         } else {
-            showToast('Erro ao criar agenda: ' + (result.error || 'Erro desconhecido'), 'error');
+            showToast('❌ Erro: ' + (result.error || 'Erro desconhecido'), 'error');
         }
     } catch (error) {
-        showToast('Erro ao criar agenda', 'error');
-        console.error('Erro:', error);
+        showToast('❌ Erro ao criar agenda', 'error');
+        console.error(error);
     }
 }
 
@@ -129,37 +126,45 @@ async function carregarAgendasAdmin() {
         const response = await fetch(`${API_URL}/agendas`);
         const data = await response.json();
         agendas = data;
-        renderizarTabelaAgendas(data);
+        renderizarTabelaAdmin(data);
+        document.getElementById('totalAgendas').textContent = `${data.length || 0} agendas`;
     } catch (error) {
-        showToast('Erro ao carregar agendas', 'error');
-        console.error('Erro:', error);
+        showToast('❌ Erro ao carregar agendas', 'error');
+        console.error(error);
     }
 }
 
-function renderizarTabelaAgendas(agendas) {
-    const tbody = document.getElementById('agendaTableBody');
+function renderizarTabelaAdmin(agendas) {
+    const tbody = document.getElementById('adminTableBody');
     
     if (!agendas || agendas.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="empty-message">Nenhuma agenda encontrada</td></tr>`;
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>Nenhuma agenda cadastrada</p>
+                </td>
+            </tr>
+        `;
         return;
     }
     
-    tbody.innerHTML = agendas.map(agenda => `
+    tbody.innerHTML = agendas.map(a => `
         <tr>
-            <td>${formatDate(agenda.Dia)}</td>
-            <td>${agenda.Horário}</td>
-            <td><strong>${agenda.Tipo}</strong></td>
-            <td>${agenda.Participantes}</td>
-            <td>${agenda.Local}</td>
-            <td><span class="status-badge status-${getStatusClass(agenda.Status)}">${agenda.Status}</span></td>
+            <td>${formatDate(a.Dia)}</td>
+            <td>${a.Horário || '--:--'}</td>
+            <td><strong>${a.Tipo || '--'}</strong></td>
+            <td>${a.Participantes || '--'}</td>
+            <td>${a.Local || '--'}</td>
+            <td><span class="status-badge status-${getStatusClass(a.Status)}">${a.Status || 'Pendente'}</span></td>
             <td>
-                <button onclick="alterarStatus('${agenda.ID}', 'Realizada')" class="btn-small btn-success">
+                <button onclick="alterarStatus('${a.ID}', 'Realizada')" class="btn-small btn-success" title="Finalizar">
                     <i class="fas fa-check"></i>
                 </button>
-                <button onclick="alterarStatus('${agenda.ID}', 'Cancelada')" class="btn-small btn-danger">
+                <button onclick="alterarStatus('${a.ID}', 'Cancelada')" class="btn-small btn-danger" title="Cancelar">
                     <i class="fas fa-times"></i>
                 </button>
-                <button onclick="excluirAgenda('${agenda.ID}')" class="btn-small" style="background:#FF6B6B;color:white;">
+                <button onclick="excluirAgenda('${a.ID}')" class="btn-small" style="background:#FEE2E2;color:#991B1B;" title="Excluir">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -173,22 +178,20 @@ async function alterarStatus(id, novoStatus) {
     try {
         const response = await fetch(`${API_URL}/atualizarStatus`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, status: novoStatus })
         });
         
         const result = await response.json();
         if (result.success) {
-            showToast('Status atualizado com sucesso!', 'success');
+            showToast('✅ Status atualizado!', 'success');
             carregarAgendasAdmin();
         } else {
-            showToast('Erro ao atualizar status: ' + (result.error || 'Erro desconhecido'), 'error');
+            showToast('❌ Erro ao atualizar status', 'error');
         }
     } catch (error) {
-        showToast('Erro ao atualizar status', 'error');
-        console.error('Erro:', error);
+        showToast('❌ Erro ao atualizar status', 'error');
+        console.error(error);
     }
 }
 
@@ -202,82 +205,212 @@ async function excluirAgenda(id) {
         
         const result = await response.json();
         if (result.success) {
-            showToast('Agenda excluída com sucesso!', 'success');
+            showToast('✅ Agenda excluída!', 'success');
             carregarAgendasAdmin();
         } else {
-            showToast('Erro ao excluir agenda: ' + (result.error || 'Erro desconhecido'), 'error');
+            showToast('❌ Erro ao excluir agenda', 'error');
         }
     } catch (error) {
-        showToast('Erro ao excluir agenda', 'error');
-        console.error('Erro:', error);
+        showToast('❌ Erro ao excluir agenda', 'error');
+        console.error(error);
     }
 }
 
-// Funções do Usuário
+// ==================== ADMIN - SOLICITAÇÕES ====================
+async function carregarSolicitacoes() {
+    try {
+        const response = await fetch(`${API_URL}/agendas`);
+        const data = await response.json();
+        
+        const solicitacoes = data
+            .filter(a => a.Status === 'Aguardando Autorização')
+            .map(a => ({
+                ID: a.ID,
+                'Agenda ID': a.ID,
+                Solicitante: 'Usuário',
+                'Nova Data': a.Dia,
+                'Novo Horário': a.Horário,
+                Status: 'Pendente'
+            }));
+        
+        renderizarSolicitacoes(solicitacoes);
+        atualizarBadgeAdmin(solicitacoes);
+    } catch (error) {
+        showToast('❌ Erro ao carregar solicitações', 'error');
+        console.error(error);
+    }
+}
+
+function renderizarSolicitacoes(solicitacoes) {
+    const container = document.getElementById('solicitacoesList');
+    const pendentes = solicitacoes.filter(s => s.Status === 'Pendente');
+    
+    if (pendentes.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <p>Nenhuma solicitação pendente</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = pendentes.map(s => `
+        <div style="background:var(--gray-50);border-radius:var(--radius);padding:16px;margin-bottom:12px;border-left:4px solid var(--warning);">
+            <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:12px;">
+                <div>
+                    <h4 style="font-size:16px;font-weight:600;margin-bottom:4px;">
+                        <i class="fas fa-clock" style="color:var(--warning);"></i> Solicitação de Adiamento
+                    </h4>
+                    <p style="font-size:14px;color:var(--gray-600);">
+                        <strong>Solicitante:</strong> ${s.Solicitante || 'Não informado'}
+                    </p>
+                    <p style="font-size:14px;color:var(--gray-600);">
+                        <strong>Nova Data:</strong> ${formatDate(s['Nova Data'])} às ${s['Novo Horário']}
+                    </p>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="autorizarAdiamento('${s.ID}')" class="btn-small btn-success">
+                        <i class="fas fa-check"></i> Autorizar
+                    </button>
+                    <button onclick="rejeitarAdiamento('${s.ID}')" class="btn-small btn-danger">
+                        <i class="fas fa-times"></i> Rejeitar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function atualizarBadgeAdmin(solicitacoes) {
+    const pendentes = solicitacoes.filter(s => s.Status === 'Pendente');
+    const badge = document.getElementById('adminBadge');
+    if (pendentes.length > 0) {
+        badge.textContent = pendentes.length;
+        badge.style.display = 'inline';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+async function autorizarAdiamento(id) {
+    if (!confirm('Deseja autorizar este adiamento?')) return;
+    
+    try {
+        const response = await fetch(`${API_URL}/autorizarAdiamento`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('✅ Adiamento autorizado!', 'success');
+            carregarSolicitacoes();
+            carregarAgendasAdmin();
+        } else {
+            showToast('❌ Erro ao autorizar', 'error');
+        }
+    } catch (error) {
+        showToast('❌ Erro ao autorizar', 'error');
+        console.error(error);
+    }
+}
+
+async function rejeitarAdiamento(id) {
+    if (!confirm('Deseja rejeitar este adiamento?')) return;
+    
+    try {
+        const response = await fetch(`${API_URL}/rejeitarAdiamento`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('✅ Adiamento rejeitado!', 'success');
+            carregarSolicitacoes();
+            carregarAgendasAdmin();
+        } else {
+            showToast('❌ Erro ao rejeitar', 'error');
+        }
+    } catch (error) {
+        showToast('❌ Erro ao rejeitar', 'error');
+        console.error(error);
+    }
+}
+
+// ==================== USUÁRIO ====================
 async function carregarAgendasUsuario() {
     try {
         const response = await fetch(`${API_URL}/agendas`);
         const data = await response.json();
         agendas = data;
-        renderizarCardsAgendas(data);
+        renderizarCardsUsuario(data);
     } catch (error) {
-        showToast('Erro ao carregar agendas', 'error');
-        console.error('Erro:', error);
+        showToast('❌ Erro ao carregar agendas', 'error');
+        console.error(error);
     }
 }
 
-function renderizarCardsAgendas(agendas) {
+function renderizarCardsUsuario(agendas) {
     const container = document.getElementById('cardsContainer');
     
     if (!agendas || agendas.length === 0) {
-        container.innerHTML = `<div class="empty-message">Nenhuma agenda disponível</div>`;
+        container.innerHTML = `
+            <div class="empty-state" style="grid-column:1/-1;">
+                <i class="fas fa-calendar-plus"></i>
+                <p>Nenhuma agenda disponível</p>
+            </div>
+        `;
         return;
     }
     
-    container.innerHTML = agendas.map(agenda => `
-        <div class="agenda-card" data-status="${agenda.Status}">
-            <div class="card-title">${agenda.Tipo}</div>
+    container.innerHTML = agendas.map(a => `
+        <div class="agenda-card" data-status="${a.Status}">
+            <div class="card-title">${a.Tipo || 'Agenda'}</div>
             <div class="card-details">
                 <div class="detail">
                     <i class="fas fa-calendar"></i>
-                    <span>${formatDate(agenda.Dia)} às ${agenda.Horário}</span>
+                    <span>${formatDate(a.Dia)} às ${a.Horário || '--:--'}</span>
                 </div>
                 <div class="detail">
                     <i class="fas fa-users"></i>
-                    <span>${agenda.Participantes}</span>
+                    <span>${a.Participantes || 'Sem participantes'}</span>
                 </div>
                 <div class="detail">
                     <i class="fas fa-map-marker-alt"></i>
-                    <span>${agenda.Local}</span>
+                    <span>${a.Local || 'Local não informado'}</span>
                 </div>
                 <div class="detail">
                     <i class="fas fa-map-pin"></i>
-                    <span>${agenda.Endereço}</span>
+                    <span>${a.Endereço || 'Endereço não informado'}</span>
                 </div>
                 <div class="detail">
-                    <span class="status-badge status-${getStatusClass(agenda.Status)}">${agenda.Status}</span>
+                    <span class="status-badge status-${getStatusClass(a.Status)}">${a.Status || 'Pendente'}</span>
                 </div>
                 <div class="detail">
-                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(agenda.Endereço)}" 
-                       target="_blank" class="btn-small btn-info" style="text-decoration:none;color:white;">
+                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.Endereço || '')}" 
+                       target="_blank" class="btn-small btn-info" style="text-decoration:none;color:#1E40AF;">
                         <i class="fas fa-map"></i> Ver no Mapa
                     </a>
                 </div>
             </div>
             <div class="card-actions">
-                ${agenda.Status !== 'Realizada' && agenda.Status !== 'Cancelada' ? `
-                    <button onclick="finalizarAgenda('${agenda.ID}')" class="btn-small btn-success">
+                ${a.Status !== 'Realizada' && a.Status !== 'Cancelada' ? `
+                    <button onclick="finalizarAgenda('${a.ID}')" class="btn-small btn-success">
                         <i class="fas fa-check"></i> Finalizar
                     </button>
-                    <button onclick="cancelarAgenda('${agenda.ID}')" class="btn-small btn-danger">
+                    <button onclick="cancelarAgenda('${a.ID}')" class="btn-small btn-danger">
                         <i class="fas fa-times"></i> Cancelar
                     </button>
-                    <button onclick="abrirModalAdiar('${agenda.ID}')" class="btn-small btn-warning">
+                    <button onclick="abrirModalAdiar('${a.ID}')" class="btn-small btn-warning">
                         <i class="fas fa-clock"></i> Adiar
                     </button>
                 ` : `
-                    <span style="color:var(--gray-4);font-size:12px;">
-                        ${agenda.Status === 'Realizada' ? '✅ Finalizada' : '❌ Cancelada'}
+                    <span style="color:var(--gray-500);font-size:13px;width:100%;text-align:center;">
+                        ${a.Status === 'Realizada' ? '✅ Finalizada' : '❌ Cancelada'}
                     </span>
                 `}
             </div>
@@ -297,13 +430,13 @@ function filterAgendas() {
     
     if (searchTerm) {
         filtered = filtered.filter(a => 
-            a.Tipo.toLowerCase().includes(searchTerm) ||
-            a.Participantes.toLowerCase().includes(searchTerm) ||
-            a.Local.toLowerCase().includes(searchTerm)
+            (a.Tipo || '').toLowerCase().includes(searchTerm) ||
+            (a.Participantes || '').toLowerCase().includes(searchTerm) ||
+            (a.Local || '').toLowerCase().includes(searchTerm)
         );
     }
     
-    renderizarCardsAgendas(filtered);
+    renderizarCardsUsuario(filtered);
 }
 
 async function finalizarAgenda(id) {
@@ -318,12 +451,15 @@ async function cancelarAgenda(id) {
     carregarAgendasUsuario();
 }
 
+function refreshAgendas() {
+    carregarAgendasUsuario();
+    showToast('🔄 Agendas atualizadas!', 'info');
+}
+
+// ==================== MODAL ADIAR ====================
 function abrirModalAdiar(id) {
     document.getElementById('agendaIdAdiar').value = id;
     document.getElementById('modalAdiar').classList.add('active');
-    document.getElementById('novaData').value = '';
-    document.getElementById('novoHorario').value = '';
-    document.getElementById('solicitante').value = '';
 }
 
 function fecharModal() {
@@ -343,163 +479,27 @@ async function solicitarAdiamento(event) {
     try {
         const response = await fetch(`${API_URL}/solicitarAdiamento`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
         });
         
         const result = await response.json();
         if (result.success) {
-            showToast('Solicitação enviada com sucesso! Aguarde autorização.', 'success');
+            showToast('✅ Solicitação enviada! Aguarde autorização.', 'success');
             fecharModal();
             carregarAgendasUsuario();
         } else {
-            showToast('Erro ao enviar solicitação: ' + (result.error || 'Erro desconhecido'), 'error');
+            showToast('❌ Erro ao enviar solicitação', 'error');
         }
     } catch (error) {
-        showToast('Erro ao enviar solicitação', 'error');
-        console.error('Erro:', error);
+        showToast('❌ Erro ao enviar solicitação', 'error');
+        console.error(error);
     }
 }
 
-// Funções de Solicitações
-async function carregarSolicitacoes() {
-    try {
-        const response = await fetch(`${API_URL}/agendas`);
-        // Nota: As solicitações são carregadas separadamente
-        // Você pode adicionar um endpoint específico para solicitações
-        const data = await response.json();
-        // Simular solicitações pendentes
-        const solicitacoesSimuladas = data
-            .filter(a => a.Status === 'Aguardando Autorização')
-            .map(a => ({
-                ID: a.ID,
-                'Agenda ID': a.ID,
-                Solicitante: 'Usuário',
-                'Nova Data': a.Dia,
-                'Novo Horário': a.Horário,
-                Status: 'Pendente'
-            }));
-        renderizarSolicitacoes(solicitacoesSimuladas);
-        atualizarBadge(solicitacoesSimuladas);
-    } catch (error) {
-        showToast('Erro ao carregar solicitações', 'error');
-        console.error('Erro:', error);
-    }
-}
-
-function renderizarSolicitacoes(solicitacoes) {
-    const container = document.getElementById('solicitacoesList');
-    
-    const pendentes = solicitacoes.filter(s => s.Status === 'Pendente');
-    
-    if (pendentes.length === 0) {
-        container.innerHTML = `<p class="empty-message">Nenhuma solicitação pendente</p>`;
-        return;
-    }
-    
-    container.innerHTML = pendentes.map(s => `
-        <div class="card" style="border-left:4px solid var(--warning);">
-            <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:10px;">
-                <div>
-                    <h3 style="font-size:16px;margin-bottom:5px;">
-                        Solicitação de Adiamento
-                    </h3>
-                    <p style="font-size:14px;color:var(--gray-4);">
-                        <strong>Solicitante:</strong> ${s.Solicitante || 'Não informado'}
-                    </p>
-                    <p style="font-size:14px;color:var(--gray-4);">
-                        <strong>Nova Data:</strong> ${formatDate(s['Nova Data'])} às ${s['Novo Horário']}
-                    </p>
-                    <p style="font-size:14px;color:var(--gray-4);">
-                        <strong>Agenda ID:</strong> ${s['Agenda ID'] || s.ID}
-                    </p>
-                </div>
-                <div style="display:flex;gap:8px;">
-                    <button onclick="autorizarAdiamento('${s.ID}')" class="btn-small btn-success">
-                        <i class="fas fa-check"></i> Autorizar
-                    </button>
-                    <button onclick="rejeitarAdiamento('${s.ID}')" class="btn-small btn-danger">
-                        <i class="fas fa-times"></i> Rejeitar
-                    </button>
-                </div>
-            </div>
-        </div>
-    `).join('');
-}
-
-function atualizarBadge(solicitacoes) {
-    const pendentes = solicitacoes.filter(s => s.Status === 'Pendente');
-    const badge = document.getElementById('solicitacaoBadge');
-    if (pendentes.length > 0) {
-        badge.textContent = pendentes.length;
-        badge.style.display = 'inline-block';
-    } else {
-        badge.style.display = 'none';
-    }
-}
-
-async function autorizarAdiamento(id) {
-    if (!confirm('Deseja autorizar este adiamento?')) return;
-    
-    try {
-        const response = await fetch(`${API_URL}/autorizarAdiamento`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ id })
-        });
-        
-        const result = await response.json();
-        if (result.success) {
-            showToast('Adiamento autorizado com sucesso!', 'success');
-            carregarSolicitacoes();
-            carregarAgendasAdmin();
-        } else {
-            showToast('Erro ao autorizar adiamento: ' + (result.error || 'Erro desconhecido'), 'error');
-        }
-    } catch (error) {
-        showToast('Erro ao autorizar adiamento', 'error');
-        console.error('Erro:', error);
-    }
-}
-
-async function rejeitarAdiamento(id) {
-    if (!confirm('Deseja rejeitar este adiamento?')) return;
-    
-    try {
-        const response = await fetch(`${API_URL}/rejeitarAdiamento`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ id })
-        });
-        
-        const result = await response.json();
-        if (result.success) {
-            showToast('Adiamento rejeitado!', 'success');
-            carregarSolicitacoes();
-            carregarAgendasAdmin();
-        } else {
-            showToast('Erro ao rejeitar adiamento: ' + (result.error || 'Erro desconhecido'), 'error');
-        }
-    } catch (error) {
-        showToast('Erro ao rejeitar adiamento', 'error');
-        console.error('Erro:', error);
-    }
-}
-
-function refreshAgendas() {
-    carregarAgendasUsuario();
-    showToast('Agendas atualizadas!', 'success');
-}
-
-// Funções Utilitárias
+// ==================== UTILITÁRIOS ====================
 function formatDate(dateStr) {
-    if (!dateStr) return '';
+    if (!dateStr) return '--/--/----';
     const parts = dateStr.split('-');
     if (parts.length === 3) {
         return `${parts[2]}/${parts[1]}/${parts[0]}`;
@@ -518,45 +518,26 @@ function getStatusClass(status) {
 }
 
 function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
     const toast = document.createElement('div');
-    toast.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 12px 24px;
-        border-radius: var(--radius-sm);
-        background: ${type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--danger)' : 'var(--primary)'};
-        color: white;
-        font-weight: 500;
-        z-index: 9999;
-        box-shadow: var(--shadow);
-        max-width: 90%;
-        animation: slideUp 0.3s ease;
-        text-align: center;
-        font-size: 14px;
-    `;
+    toast.className = `toast toast-${type}`;
     toast.textContent = message;
-    document.body.appendChild(toast);
+    container.appendChild(toast);
     
     setTimeout(() => {
         toast.style.opacity = '0';
-        toast.style.transform = 'translateX(-50%) translateY(20px)';
+        toast.style.transform = 'translateY(-20px)';
         toast.style.transition = 'all 0.3s ease';
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
 
-// Fechar modal clicando fora
+// ==================== EVENTOS GLOBAIS ====================
 window.onclick = function(event) {
     const modal = document.getElementById('modalAdiar');
-    if (event.target === modal) {
-        fecharModal();
-    }
-}
+    if (event.target === modal) fecharModal();
+};
 
 document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        fecharModal();
-    }
+    if (event.key === 'Escape') fecharModal();
 });
