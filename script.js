@@ -1,591 +1,520 @@
-// ==================== CONFIGURAÇÃO ====================
-const USERS = {
-    admin: { password: '123', role: 'admin' },
-    user: { password: '123', role: 'user' }
+// script.js - Lógica da Aplicação
+
+// Configuração
+const CONFIG = {
+    // Substitua pela URL do seu Web App do Google Apps Script
+    API_URL: 'https://script.google.com/macros/s/SEU_SCRIPT_ID/exec',
+    APP_VERSION: '1.0.0'
 };
 
-const API_URL = '/api';
-let currentUser = null;
-let agendas = [];
+// Estado da Aplicação
+const state = {
+    isAdmin: false,
+    agendas: [],
+    selectedAgenda: null,
+    currentFilter: 'all'
+};
 
-// ==================== LOGIN ====================
-function togglePassword() {
-    const input = document.getElementById('password');
-    const icon = document.querySelector('.toggle-password i');
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.className = 'fas fa-eye-slash';
-    } else {
-        input.type = 'password';
-        icon.className = 'fas fa-eye';
-    }
-}
+// DOM Elements
+const elements = {
+    adminPanel: document.getElementById('adminPanel'),
+    userPanel: document.getElementById('userPanel'),
+    adminToggle: document.getElementById('adminToggle'),
+    addAgendaBtn: document.getElementById('addAgendaBtn'),
+    agendaForm: document.getElementById('agendaForm'),
+    agendaFormElement: document.getElementById('agendaFormElement'),
+    cancelForm: document.getElementById('cancelForm'),
+    adminAgendaList: document.getElementById('adminAgendaList'),
+    userAgendaList: document.getElementById('userAgendaList'),
+    statusFilter: document.getElementById('statusFilter'),
+    rescheduleModal: document.getElementById('rescheduleModal'),
+    rescheduleForm: document.getElementById('rescheduleForm'),
+    modalClose: document.querySelectorAll('.modal-close'),
+    agendaData: document.getElementById('agendaData'),
+    agendaHorario: document.getElementById('agendaHorario'),
+    agendaTipo: document.getElementById('agendaTipo'),
+    agendaParticipantes: document.getElementById('agendaParticipantes'),
+    agendaLocal: document.getElementById('agendaLocal'),
+    agendaStatus: document.getElementById('agendaStatus'),
+    novaData: document.getElementById('novaData'),
+    novoHorario: document.getElementById('novoHorario')
+};
 
-function handleLogin(event) {
-    event.preventDefault();
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
-    
-    if (!username || !password) {
-        showToast('Preencha todos os campos', 'error');
-        return;
-    }
-    
-    const user = USERS[username];
-    if (!user || user.password !== password) {
-        showToast('Usuário ou senha inválidos', 'error');
-        return;
-    }
-    
-    loginUser(username, user.role);
-}
+// Inicialização
+document.addEventListener('DOMContentLoaded', () => {
+    loadAgendas();
+    setupEventListeners();
+    setupPWA();
+});
 
-function loginUser(username, role) {
-    currentUser = { username, role };
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-    
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    
-    if (role === 'admin') {
-        document.getElementById('adminScreen').classList.add('active');
-        carregarAgendasAdmin();
-        carregarSolicitacoes();
-        atualizarDashboard();
-    } else {
-        document.getElementById('userScreen').classList.add('active');
-        carregarAgendasUsuario();
-    }
-}
-
-function logout() {
-    currentUser = null;
-    localStorage.removeItem('currentUser');
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById('loginScreen').classList.add('active');
-    document.getElementById('username').value = '';
-    document.getElementById('password').value = '';
-    showToast('Desconectado', 'info');
-}
-
-// ==================== ADMIN - NAVEGAÇÃO ====================
-function switchAdminTab(tab) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-    
-    const tabMap = {
-        'dashboard': 'adminDashboard',
-        'nova': 'adminNova',
-        'lista': 'adminLista',
-        'solicitacoes': 'adminSolicitacoes'
-    };
-    
-    document.getElementById(tabMap[tab]).classList.add('active');
-    
-    document.querySelectorAll('.tab-item').forEach(item => {
-        const icon = item.querySelector('i');
-        if (icon && icon.className.includes('chart-pie') && tab === 'dashboard') item.classList.add('active');
-        else if (icon && icon.className.includes('plus-circle') && tab === 'nova') item.classList.add('active');
-        else if (icon && icon.className.includes('list-ul') && tab === 'lista') item.classList.add('active');
-        else if (icon && icon.className.includes('bell') && tab === 'solicitacoes') item.classList.add('active');
-    });
-    
-    if (tab === 'dashboard') atualizarDashboard();
-    else if (tab === 'lista') carregarAgendasAdmin();
-    else if (tab === 'solicitacoes') carregarSolicitacoes();
-}
-
-// ==================== ADMIN - DASHBOARD ====================
-async function atualizarDashboard() {
+// Carregar Agendas
+async function loadAgendas() {
     try {
-        const response = await fetch(`${API_URL}/agendas`);
-        const data = await response.json();
-        agendas = data;
-        
-        const total = data.length;
-        const pendentes = data.filter(a => a.Status === 'Pendente').length;
-        const realizadas = data.filter(a => a.Status === 'Realizada').length;
-        const canceladas = data.filter(a => a.Status === 'Cancelada').length;
-        
-        document.getElementById('statTotal').textContent = total;
-        document.getElementById('statPendentes').textContent = pendentes;
-        document.getElementById('statRealizadas').textContent = realizadas;
-        document.getElementById('statCanceladas').textContent = canceladas;
-        document.getElementById('adminCount').textContent = total;
-        
-        renderizarProximas(data);
-    } catch (error) {
-        console.error('Erro:', error);
-    }
-}
-
-function renderizarProximas(agendas) {
-    const container = document.getElementById('proximasAgendas');
-    const proximas = agendas
-        .filter(a => a.Status === 'Pendente')
-        .sort((a, b) => new Date(a.Dia) - new Date(b.Dia))
-        .slice(0, 5);
-    
-    if (proximas.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-calendar-plus"></i>
-                <p>Nenhuma agenda próxima</p>
-            </div>
-        `;
-        return;
-    }
-    
-    container.innerHTML = proximas.map(a => `
-        <div class="list-item">
-            <div class="list-item-content">
-                <div class="list-item-title">${a.Tipo || 'Agenda'}</div>
-                <div class="list-item-sub">${formatDate(a.Dia)} às ${a.Horário || '--:--'} • ${a.Local || ''}</div>
-            </div>
-            <span class="status-badge status-${getStatusClass(a.Status)}">${a.Status || 'Pendente'}</span>
-        </div>
-    `).join('');
-}
-
-// ==================== ADMIN - AGENDAS ====================
-async function criarAgenda(event) {
-    event.preventDefault();
-    
-    const dados = {
-        dia: document.getElementById('dia').value,
-        horario: document.getElementById('horario').value,
-        tipo: document.getElementById('tipo').value,
-        participantes: document.getElementById('participantes').value,
-        local: document.getElementById('local').value,
-        endereco: document.getElementById('endereco').value,
-        status: document.getElementById('status').value
-    };
-    
-    try {
-        const response = await fetch(`${API_URL}/agendas`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dados)
-        });
-        
+        const response = await fetch(`${CONFIG.API_URL}?action=getAgendas`);
         const result = await response.json();
+        
         if (result.success) {
-            showToast('Agenda criada!', 'success');
-            document.getElementById('agendaForm').reset();
-            carregarAgendasAdmin();
-            atualizarDashboard();
+            state.agendas = result.data;
+            renderAgendas();
         } else {
-            showToast('Erro ao criar', 'error');
+            showError('Erro ao carregar agendas: ' + result.error);
         }
     } catch (error) {
-        showToast('Erro ao criar', 'error');
+        showError('Erro de conexão: ' + error.message);
     }
 }
 
-async function carregarAgendasAdmin() {
-    try {
-        const response = await fetch(`${API_URL}/agendas`);
-        const data = await response.json();
-        agendas = data;
-        renderizarListaAdmin(data);
-        document.getElementById('totalAgendas').textContent = data.length || 0;
-    } catch (error) {
-        showToast('Erro ao carregar', 'error');
-    }
-}
-
-function renderizarListaAdmin(agendas) {
-    const container = document.getElementById('adminTableBody');
+// Renderizar Agendas
+function renderAgendas() {
+    const filteredAgendas = filterAgendas();
     
-    if (!agendas || agendas.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-inbox"></i>
-                <p>Nenhuma agenda</p>
-            </div>
-        `;
-        return;
+    // Renderizar para Admin
+    if (state.isAdmin) {
+        renderAdminAgendas(filteredAgendas);
     }
     
-    container.innerHTML = agendas.map(a => `
-        <div class="list-item">
-            <div class="list-item-content">
-                <div class="list-item-title">${a.Tipo || 'Agenda'}</div>
-                <div class="list-item-sub">
-                    ${formatDate(a.Dia)} às ${a.Horário || '--:--'} • ${a.Participantes || ''}
-                </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;">
-                <span class="status-badge status-${getStatusClass(a.Status)}">${a.Status || 'Pendente'}</span>
-                <button onclick="alterarStatus('${a.ID}', 'Realizada')" class="btn-small btn-success">
-                    <i class="fas fa-check"></i>
-                </button>
-                <button onclick="excluirAgenda('${a.ID}')" class="btn-small btn-danger">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        </div>
-    `).join('');
-}
-
-async function alterarStatus(id, novoStatus) {
-    if (!confirm(`Alterar para "${novoStatus}"?`)) return;
-    
-    try {
-        const response = await fetch(`${API_URL}/atualizarStatus`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, status: novoStatus })
-        });
-        
-        const result = await response.json();
-        if (result.success) {
-            showToast('Status atualizado!', 'success');
-            carregarAgendasAdmin();
-            atualizarDashboard();
-        }
-    } catch (error) {
-        showToast('Erro ao atualizar', 'error');
-    }
-}
-
-async function excluirAgenda(id) {
-    if (!confirm('Excluir esta agenda?')) return;
-    
-    try {
-        const response = await fetch(`${API_URL}/agendas/${id}`, { method: 'DELETE' });
-        const result = await response.json();
-        if (result.success) {
-            showToast('Agenda excluída!', 'success');
-            carregarAgendasAdmin();
-            atualizarDashboard();
-        }
-    } catch (error) {
-        showToast('Erro ao excluir', 'error');
-    }
-}
-
-// ==================== ADMIN - SOLICITAÇÕES ====================
-async function carregarSolicitacoes() {
-    try {
-        const response = await fetch(`${API_URL}/agendas`);
-        const data = await response.json();
-        
-        const solicitacoes = data
-            .filter(a => a.Status === 'Aguardando Autorização')
-            .map(a => ({
-                ID: a.ID,
-                'Agenda ID': a.ID,
-                Solicitante: 'Usuário',
-                'Nova Data': a.Dia,
-                'Novo Horário': a.Horário,
-                Status: 'Pendente'
-            }));
-        
-        renderizarSolicitacoes(solicitacoes);
-        document.getElementById('solicitacoesCount').textContent = solicitacoes.length || 0;
-        document.getElementById('adminBadge').textContent = solicitacoes.length || 0;
-    } catch (error) {
-        showToast('Erro ao carregar', 'error');
-    }
-}
-
-function renderizarSolicitacoes(solicitacoes) {
-    const container = document.getElementById('solicitacoesList');
-    const pendentes = solicitacoes.filter(s => s.Status === 'Pendente');
-    
-    if (pendentes.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-check-circle"></i>
-                <p>Nenhuma solicitação</p>
-            </div>
-        `;
-        return;
-    }
-    
-    container.innerHTML = pendentes.map(s => `
-        <div class="solicitacao-item">
-            <div class="solicitacao-header">
-                <div>
-                    <div class="solicitacao-title">
-                        <i class="fas fa-clock" style="color:var(--warning);"></i> Solicitação de Adiamento
-                    </div>
-                    <div class="solicitacao-info">
-                        <strong>Solicitante:</strong> ${s.Solicitante || 'Não informado'}
-                    </div>
-                    <div class="solicitacao-info">
-                        <strong>Nova Data:</strong> ${formatDate(s['Nova Data'])} às ${s['Novo Horário']}
-                    </div>
-                </div>
-                <div class="solicitacao-actions">
-                    <button onclick="autorizarAdiamento('${s.ID}')" class="btn-small btn-success">
-                        <i class="fas fa-check"></i>
-                    </button>
-                    <button onclick="rejeitarAdiamento('${s.ID}')" class="btn-small btn-danger">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    `).join('');
-}
-
-async function autorizarAdiamento(id) {
-    if (!confirm('Autorizar adiamento?')) return;
-    try {
-        await fetch(`${API_URL}/autorizarAdiamento`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id })
-        });
-        showToast('Adiamento autorizado!', 'success');
-        carregarSolicitacoes();
-        carregarAgendasAdmin();
-        atualizarDashboard();
-    } catch (error) {
-        showToast('Erro ao autorizar', 'error');
-    }
-}
-
-async function rejeitarAdiamento(id) {
-    if (!confirm('Rejeitar adiamento?')) return;
-    try {
-        await fetch(`${API_URL}/rejeitarAdiamento`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id })
-        });
-        showToast('Adiamento rejeitado!', 'success');
-        carregarSolicitacoes();
-        carregarAgendasAdmin();
-    } catch (error) {
-        showToast('Erro ao rejeitar', 'error');
-    }
-}
-
-// ==================== USUÁRIO ====================
-function switchUserTab(tab) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-    
-    document.getElementById(`user${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
-    
-    document.querySelectorAll('.tab-item').forEach(item => {
-        const icon = item.querySelector('i');
-        if (icon && icon.className.includes('calendar-alt') && tab === 'minhas') item.classList.add('active');
-        else if (icon && icon.className.includes('history') && tab === 'historico') item.classList.add('active');
-    });
-    
-    if (tab === 'historico') carregarHistorico();
-}
-
-async function carregarAgendasUsuario() {
-    try {
-        const response = await fetch(`${API_URL}/agendas`);
-        const data = await response.json();
-        agendas = data;
-        renderizarCards(data);
-        document.getElementById('userCount').textContent = data.length || 0;
-    } catch (error) {
-        showToast('Erro ao carregar', 'error');
-    }
-}
-
-function renderizarCards(agendas) {
-    const container = document.getElementById('cardsContainer');
-    
-    if (!agendas || agendas.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-calendar-plus"></i>
-                <p>Nenhuma agenda</p>
-            </div>
-        `;
-        return;
-    }
-    
-    container.innerHTML = agendas.map(a => `
-        <div class="agenda-card">
-            <div class="card-title">${a.Tipo || 'Agenda'}</div>
-            <div class="card-details">
-                <div class="detail">
-                    <i class="fas fa-calendar"></i>
-                    <span>${formatDate(a.Dia)} às ${a.Horário || '--:--'}</span>
-                </div>
-                <div class="detail">
-                    <i class="fas fa-users"></i>
-                    <span>${a.Participantes || 'Sem participantes'}</span>
-                </div>
-                <div class="detail">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <span>${a.Local || 'Local não informado'}</span>
-                </div>
-                <div class="detail" style="justify-content:space-between;">
-                    <span class="status-badge status-${getStatusClass(a.Status)}">${a.Status || 'Pendente'}</span>
-                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.Endereço || '')}" 
-                       target="_blank" class="btn-small btn-info" style="text-decoration:none;color:white;">
-                        <i class="fas fa-map"></i> Mapa
-                    </a>
-                </div>
-            </div>
-            <div class="card-actions">
-                ${a.Status !== 'Realizada' && a.Status !== 'Cancelada' ? `
-                    <button onclick="finalizarAgenda('${a.ID}')" class="btn-small btn-success">
-                        <i class="fas fa-check"></i> Finalizar
-                    </button>
-                    <button onclick="abrirModalAdiar('${a.ID}')" class="btn-small btn-warning">
-                        <i class="fas fa-clock"></i> Adiar
-                    </button>
-                ` : `
-                    <span style="color:var(--gray-500);font-size:13px;text-align:center;width:100%;padding:4px 0;">
-                        ${a.Status === 'Realizada' ? '✅ Finalizada' : '❌ Cancelada'}
-                    </span>
-                `}
-            </div>
-        </div>
-    `).join('');
+    // Renderizar para Usuário
+    renderUserAgendas(filteredAgendas);
 }
 
 function filterAgendas() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const statusFilter = document.getElementById('statusFilter').value;
+    const filter = state.currentFilter;
+    let agendas = state.agendas;
     
-    let filtered = agendas;
-    
-    if (statusFilter !== 'all') {
-        filtered = filtered.filter(a => a.Status === statusFilter);
+    if (filter !== 'all') {
+        agendas = agendas.filter(a => a.Status === filter);
     }
     
-    if (searchTerm) {
-        filtered = filtered.filter(a => 
-            (a.Tipo || '').toLowerCase().includes(searchTerm) ||
-            (a.Participantes || '').toLowerCase().includes(searchTerm) ||
-            (a.Local || '').toLowerCase().includes(searchTerm)
-        );
+    // Filtrar para usuário (apenas agendas onde o usuário é participante)
+    if (!state.isAdmin) {
+        const userEmail = prompt('Digite seu email para ver suas agendas:');
+        if (userEmail) {
+            agendas = agendas.filter(a => 
+                a.Participantes && a.Participantes.includes(userEmail)
+            );
+        }
     }
     
-    renderizarCards(filtered);
+    return agendas;
 }
 
-async function finalizarAgenda(id) {
-    if (!confirm('Finalizar esta agenda?')) return;
-    await alterarStatus(id, 'Realizada');
-    carregarAgendasUsuario();
-    showToast('Agenda finalizada!', 'success');
-}
-
-function carregarHistorico() {
-    const container = document.getElementById('historicoList');
-    const historico = agendas.filter(a => 
-        a.Status === 'Realizada' || a.Status === 'Cancelada'
-    );
-    
-    if (historico.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-history"></i>
-                <p>Nenhum histórico</p>
-            </div>
-        `;
+function renderAdminAgendas(agendas) {
+    if (agendas.length === 0) {
+        elements.adminAgendaList.innerHTML = '<div class="loading">Nenhuma agenda encontrada</div>';
         return;
     }
     
-    container.innerHTML = historico.map(a => `
-        <div class="list-item">
-            <div class="list-item-content">
-                <div class="list-item-title">${a.Tipo || 'Agenda'}</div>
-                <div class="list-item-sub">
-                    ${formatDate(a.Dia)} às ${a.Horário || '--:--'} • ${a.Participantes || ''}
-                </div>
+    elements.adminAgendaList.innerHTML = agendas.map(agenda => `
+        <div class="agenda-card">
+            <div class="card-title">${agenda.Tipo || 'Sem título'}</div>
+            <div class="card-detail">
+                <span class="icon">📅</span>
+                <span>${formatDate(agenda.Data)} às ${agenda.Horario}</span>
             </div>
-            <span class="status-badge status-${getStatusClass(a.Status)}">${a.Status}</span>
+            <div class="card-detail">
+                <span class="icon">👥</span>
+                <span>${agenda.Participantes || 'Sem participantes'}</span>
+            </div>
+            <div class="card-detail">
+                <span class="icon">📍</span>
+                <span>${agenda.Local || 'Sem local'}</span>
+            </div>
+            <div id="map-${agenda.ID}" class="agenda-map"></div>
+            <span class="card-status status-${agenda.Status}">${agenda.Status || 'Pendente'}</span>
+            <div class="card-actions">
+                <button onclick="editAgenda('${agenda.ID}')" class="btn-warning">✏️ Editar</button>
+                <button onclick="deleteAgenda('${agenda.ID}')" class="btn-danger">🗑️ Excluir</button>
+            </div>
         </div>
     `).join('');
-}
-
-// ==================== MODAL ====================
-function abrirModalAdiar(id) {
-    document.getElementById('agendaIdAdiar').value = id;
-    document.getElementById('modalAdiar').classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
-
-function fecharModal() {
-    document.getElementById('modalAdiar').classList.remove('active');
-    document.body.style.overflow = '';
-}
-
-async function solicitarAdiamento(event) {
-    event.preventDefault();
     
-    const dados = {
-        agendaId: document.getElementById('agendaIdAdiar').value,
-        novaData: document.getElementById('novaData').value,
-        novoHorario: document.getElementById('novoHorario').value,
-        solicitante: document.getElementById('solicitante').value
-    };
+    // Inicializar mapas
+    agendas.forEach(agenda => {
+        if (agenda.Local) {
+            initMap(`map-${agenda.ID}`, agenda.Local);
+        }
+    });
+}
+
+function renderUserAgendas(agendas) {
+    const userAgendas = state.isAdmin ? agendas : agendas.filter(a => 
+        a.Participantes && a.Participantes.includes(getUserEmail())
+    );
     
+    if (userAgendas.length === 0) {
+        elements.userAgendaList.innerHTML = '<div class="loading">Nenhuma agenda para você</div>';
+        return;
+    }
+    
+    elements.userAgendaList.innerHTML = userAgendas.map(agenda => `
+        <div class="agenda-card">
+            <div class="card-title">${agenda.Tipo || 'Sem título'}</div>
+            <div class="card-detail">
+                <span class="icon">📅</span>
+                <span>${formatDate(agenda.Data)} às ${agenda.Horario}</span>
+            </div>
+            <div class="card-detail">
+                <span class="icon">👥</span>
+                <span>${agenda.Participantes || 'Sem participantes'}</span>
+            </div>
+            <div class="card-detail">
+                <span class="icon">📍</span>
+                <span>${agenda.Local || 'Sem local'}</span>
+            </div>
+            <div id="user-map-${agenda.ID}" class="agenda-map"></div>
+            <span class="card-status status-${agenda.Status}">${agenda.Status || 'Pendente'}</span>
+            ${agenda.Status !== 'Realizada' && agenda.Status !== 'Cancelada' ? `
+                <div class="card-actions">
+                    <button onclick="finalizarAgenda('${agenda.ID}')" class="btn-success">✅ Finalizar</button>
+                    <button onclick="cancelarAgenda('${agenda.ID}')" class="btn-danger">❌ Cancelar</button>
+                    <button onclick="openRescheduleModal('${agenda.ID}')" class="btn-warning">⏰ Adiar</button>
+                </div>
+            ` : ''}
+            ${agenda.SolicitacaoAdiamento === 'Solicitado' ? `
+                <div class="card-detail" style="color: var(--warning);">
+                    <span class="icon">⏳</span>
+                    <span>Solicitação de adiamento pendente</span>
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
+    
+    // Inicializar mapas
+    userAgendas.forEach(agenda => {
+        if (agenda.Local) {
+            initMap(`user-map-${agenda.ID}`, agenda.Local);
+        }
+    });
+}
+
+// Funções de Mapa
+function initMap(elementId, address) {
+    setTimeout(() => {
+        const container = document.getElementById(elementId);
+        if (!container) return;
+        
+        // Usando Leaflet com OpenStreetMap
+        const map = L.map(container).setView([-23.5505, -46.6333], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+        
+        // Geocodificar endereço
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
+                    map.setView([lat, lon], 15);
+                    L.marker([lat, lon])
+                        .addTo(map)
+                        .bindPopup(address)
+                        .openPopup();
+                }
+            })
+            .catch(() => {
+                // Fallback: mostrar localização padrão
+                L.marker([-23.5505, -46.6333])
+                    .addTo(map)
+                    .bindPopup('Localização aproximada');
+            });
+            
+        // Redimensionar mapa após renderização
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 300);
+    }, 100);
+}
+
+// Funções de Agenda
+async function addAgenda(data) {
     try {
-        const response = await fetch(`${API_URL}/solicitarAdiamento`, {
+        const response = await fetch(CONFIG.API_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dados)
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'addAgenda',
+                ...data
+            })
         });
         
         const result = await response.json();
         if (result.success) {
-            showToast('Solicitação enviada!', 'success');
-            fecharModal();
-            carregarAgendasUsuario();
+            showSuccess('Agenda criada com sucesso!');
+            loadAgendas();
+            closeForm();
         } else {
-            showToast('Erro ao enviar', 'error');
+            showError('Erro ao criar agenda: ' + result.error);
         }
     } catch (error) {
-        showToast('Erro ao enviar', 'error');
+        showError('Erro de conexão: ' + error.message);
     }
 }
 
-// ==================== UTILITÁRIOS ====================
-function formatDate(dateStr) {
-    if (!dateStr) return '--/--/----';
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+async function updateAgenda(id, data) {
+    try {
+        const response = await fetch(CONFIG.API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'updateAgenda',
+                id: id,
+                ...data
+            })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showSuccess('Agenda atualizada com sucesso!');
+            loadAgendas();
+        } else {
+            showError('Erro ao atualizar agenda: ' + result.error);
+        }
+    } catch (error) {
+        showError('Erro de conexão: ' + error.message);
     }
-    return dateStr;
 }
 
-function getStatusClass(status) {
-    const map = {
-        'Pendente': 'pendente',
-        'Realizada': 'realizada',
-        'Cancelada': 'cancelada',
-        'Aguardando Autorização': 'aguardando'
-    };
-    return map[status] || 'pendente';
-}
-
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.textContent = message;
-    container.appendChild(toast);
+async function deleteAgenda(id) {
+    if (!confirm('Tem certeza que deseja excluir esta agenda?')) return;
     
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(-20px)';
-        toast.style.transition = 'all 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    try {
+        const response = await fetch(CONFIG.API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'deleteAgenda',
+                id: id
+            })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showSuccess('Agenda excluída com sucesso!');
+            loadAgendas();
+        } else {
+            showError('Erro ao excluir agenda: ' + result.error);
+        }
+    } catch (error) {
+        showError('Erro de conexão: ' + error.message);
+    }
 }
 
-// ==================== EVENTOS ====================
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') fecharModal();
-});
+async function finalizarAgenda(id) {
+    if (!confirm('Marcar esta agenda como realizada?')) return;
+    await updateAgenda(id, { Status: 'Realizada' });
+}
 
-// Fechar modal ao clicar no backdrop
-document.querySelector('.modal-backdrop')?.addEventListener('click', fecharModal);
+async function cancelarAgenda(id) {
+    if (!confirm('Cancelar esta agenda?')) return;
+    await updateAgenda(id, { Status: 'Cancelada' });
+}
 
-console.log('📱 Studio Dashboard - Apple iOS 26');
+async function solicitarAdiamento(id, novaData, novoHorario) {
+    try {
+        const response = await fetch(CONFIG.API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'requestReschedule',
+                id: id,
+                novaData: novaData,
+                novoHorario: novoHorario,
+                usuario: getUserEmail() || 'Usuário'
+            })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showSuccess('Solicitação de adiamento enviada!');
+            loadAgendas();
+            closeRescheduleModal();
+        } else {
+            showError('Erro ao solicitar adiamento: ' + result.error);
+        }
+    } catch (error) {
+        showError('Erro de conexão: ' + error.message);
+    }
+}
+
+// Event Listeners
+function setupEventListeners() {
+    // Admin toggle
+    elements.adminToggle.addEventListener('click', () => {
+        state.isAdmin = !state.isAdmin;
+        elements.adminToggle.textContent = state.isAdmin ? '👤 Usuário' : '👤 Admin';
+        elements.adminPanel.classList.toggle('hidden', !state.isAdmin);
+        elements.userPanel.classList.toggle('hidden', state.isAdmin);
+        
+        if (state.isAdmin) {
+            elements.userPanel.classList.add('hidden');
+            elements.adminPanel.classList.remove('hidden');
+        } else {
+            elements.adminPanel.classList.add('hidden');
+            elements.userPanel.classList.remove('hidden');
+        }
+        
+        renderAgendas();
+    });
+    
+    // Add agenda
+    elements.addAgendaBtn.addEventListener('click', () => {
+        elements.agendaForm.classList.toggle('hidden');
+        if (!elements.agendaForm.classList.contains('hidden')) {
+            elements.agendaData.value = new Date().toISOString().split('T')[0];
+        }
+    });
+    
+    // Cancel form
+    elements.cancelForm.addEventListener('click', closeForm);
+    
+    // Agenda form submit
+    elements.agendaFormElement.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const data = {
+            data: elements.agendaData.value,
+            horario: elements.agendaHorario.value,
+            tipo: elements.agendaTipo.value,
+            participantes: elements.agendaParticipantes.value,
+            local: elements.agendaLocal.value,
+            status: elements.agendaStatus.value,
+            usuario: 'Admin'
+        };
+        
+        addAgenda(data);
+    });
+    
+    // Status filter
+    elements.statusFilter.addEventListener('change', (e) => {
+        state.currentFilter = e.target.value;
+        renderAgendas();
+    });
+    
+    // Reschedule form submit
+    elements.rescheduleForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = state.selectedAgenda;
+        const novaData = elements.novaData.value;
+        const novoHorario = elements.novoHorario.value;
+        
+        if (id && novaData && novoHorario) {
+            solicitarAdiamento(id, novaData, novoHorario);
+        }
+    });
+    
+    // Modal close
+    elements.modalClose.forEach(btn => {
+        btn.addEventListener('click', closeRescheduleModal);
+    });
+    
+    // Close modal on outside click
+    elements.rescheduleModal.addEventListener('click', (e) => {
+        if (e.target === elements.rescheduleModal) {
+            closeRescheduleModal();
+        }
+    });
+}
+
+// Funções auxiliares
+function openRescheduleModal(id) {
+    state.selectedAgenda = id;
+    elements.rescheduleModal.classList.remove('hidden');
+    elements.novaData.value = new Date().toISOString().split('T')[0];
+    elements.novoHorario.value = '14:00';
+}
+
+function closeRescheduleModal() {
+    elements.rescheduleModal.classList.add('hidden');
+    state.selectedAgenda = null;
+}
+
+function closeForm() {
+    elements.agendaForm.classList.add('hidden');
+    elements.agendaFormElement.reset();
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'Data não definida';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+}
+
+function getUserEmail() {
+    return localStorage.getItem('userEmail') || null;
+}
+
+function showSuccess(message) {
+    alert('✅ ' + message);
+}
+
+function showError(message) {
+    alert('❌ ' + message);
+}
+
+// PWA Setup
+function setupPWA() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(registration => {
+                console.log('ServiceWorker registrado com sucesso!');
+            })
+            .catch(error => {
+                console.log('Erro no ServiceWorker:', error);
+            });
+    }
+}
+
+// Expor funções globalmente
+window.editAgenda = function(id) {
+    const agenda = state.agendas.find(a => a.ID === id);
+    if (!agenda) return;
+    
+    // Preencher formulário com dados da agenda
+    elements.agendaData.value = agenda.Data || '';
+    elements.agendaHorario.value = agenda.Horario || '';
+    elements.agendaTipo.value = agenda.Tipo || '';
+    elements.agendaParticipantes.value = agenda.Participantes || '';
+    elements.agendaLocal.value = agenda.Local || '';
+    elements.agendaStatus.value = agenda.Status || 'Pendente';
+    
+    // Mostrar formulário
+    elements.agendaForm.classList.remove('hidden');
+    elements.agendaFormElement.querySelector('h3').textContent = 'Editar Agenda';
+    
+    // Substituir submit handler
+    elements.agendaFormElement.onsubmit = function(e) {
+        e.preventDefault();
+        const data = {
+            data: elements.agendaData.value,
+            horario: elements.agendaHorario.value,
+            tipo: elements.agendaTipo.value,
+            participantes: elements.agendaParticipantes.value,
+            local: elements.agendaLocal.value,
+            status: elements.agendaStatus.value,
+            usuario: 'Admin'
+        };
+        updateAgenda(id, data);
+        elements.agendaFormElement.onsubmit = null;
+        elements.agendaFormElement.querySelector('h3').textContent = 'Nova Agenda';
+    };
+};
+
+window.deleteAgenda = deleteAgenda;
+window.finalizarAgenda = finalizarAgenda;
+window.cancelarAgenda = cancelarAgenda;
+window.openRescheduleModal = openRescheduleModal;
+window.solicitarAdiamento = solicitarAdiamento;
+
+// Atualizar a cada 30 segundos
+setInterval(loadAgendas, 30000);
