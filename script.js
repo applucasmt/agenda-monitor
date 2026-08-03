@@ -1,4 +1,5 @@
-// script.js
+// script.js - Versão para Vercel com API proxy
+
 // Configuração
 const USERS = {
     admin: { password: 'admin123', role: 'admin' },
@@ -9,12 +10,11 @@ let currentUser = null;
 let agendas = [];
 let solicitacoes = [];
 
-// Google Apps Script URL - Substitua pela sua URL
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx2yIR19t_Sn9VemtPjkkGDJdjZNZE5dnZoqy1kfEGDzvrsqp9493dWuT5p4jmgdgcq/exec';
+// Usar a API proxy do Vercel
+const API_URL = '/api';
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
-    // Verificar se já está logado
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
         const user = JSON.parse(savedUser);
@@ -102,31 +102,37 @@ async function criarAgenda(event) {
     };
     
     try {
-        const response = await fetch(`${SCRIPT_URL}?action=criarAgenda`, {
+        const response = await fetch(`${API_URL}/agendas`, {
             method: 'POST',
-            mode: 'no-cors',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(dados)
         });
         
-        showToast('Agenda criada com sucesso!', 'success');
-        document.getElementById('agendaForm').reset();
-        carregarAgendasAdmin();
+        const result = await response.json();
+        if (result.success) {
+            showToast('Agenda criada com sucesso!', 'success');
+            document.getElementById('agendaForm').reset();
+            carregarAgendasAdmin();
+        } else {
+            showToast('Erro ao criar agenda: ' + (result.error || 'Erro desconhecido'), 'error');
+        }
     } catch (error) {
         showToast('Erro ao criar agenda', 'error');
+        console.error('Erro:', error);
     }
 }
 
 async function carregarAgendasAdmin() {
     try {
-        const response = await fetch(`${SCRIPT_URL}?action=listarAgendas`);
+        const response = await fetch(`${API_URL}/agendas`);
         const data = await response.json();
         agendas = data;
         renderizarTabelaAgendas(data);
     } catch (error) {
         showToast('Erro ao carregar agendas', 'error');
+        console.error('Erro:', error);
     }
 }
 
@@ -165,14 +171,24 @@ async function alterarStatus(id, novoStatus) {
     if (!confirm(`Deseja alterar o status para "${novoStatus}"?`)) return;
     
     try {
-        await fetch(`${SCRIPT_URL}?action=atualizarStatus&id=${id}&status=${novoStatus}`, {
+        const response = await fetch(`${API_URL}/atualizarStatus`, {
             method: 'POST',
-            mode: 'no-cors'
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id, status: novoStatus })
         });
-        showToast('Status atualizado com sucesso!', 'success');
-        carregarAgendasAdmin();
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('Status atualizado com sucesso!', 'success');
+            carregarAgendasAdmin();
+        } else {
+            showToast('Erro ao atualizar status: ' + (result.error || 'Erro desconhecido'), 'error');
+        }
     } catch (error) {
         showToast('Erro ao atualizar status', 'error');
+        console.error('Erro:', error);
     }
 }
 
@@ -180,26 +196,33 @@ async function excluirAgenda(id) {
     if (!confirm('Tem certeza que deseja excluir esta agenda?')) return;
     
     try {
-        await fetch(`${SCRIPT_URL}?action=excluirAgenda&id=${id}`, {
-            method: 'POST',
-            mode: 'no-cors'
+        const response = await fetch(`${API_URL}/agendas/${id}`, {
+            method: 'DELETE'
         });
-        showToast('Agenda excluída com sucesso!', 'success');
-        carregarAgendasAdmin();
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('Agenda excluída com sucesso!', 'success');
+            carregarAgendasAdmin();
+        } else {
+            showToast('Erro ao excluir agenda: ' + (result.error || 'Erro desconhecido'), 'error');
+        }
     } catch (error) {
         showToast('Erro ao excluir agenda', 'error');
+        console.error('Erro:', error);
     }
 }
 
 // Funções do Usuário
 async function carregarAgendasUsuario() {
     try {
-        const response = await fetch(`${SCRIPT_URL}?action=listarAgendas`);
+        const response = await fetch(`${API_URL}/agendas`);
         const data = await response.json();
         agendas = data;
         renderizarCardsAgendas(data);
     } catch (error) {
         showToast('Erro ao carregar agendas', 'error');
+        console.error('Erro:', error);
     }
 }
 
@@ -318,33 +341,51 @@ async function solicitarAdiamento(event) {
     };
     
     try {
-        await fetch(`${SCRIPT_URL}?action=solicitarAdiamento`, {
+        const response = await fetch(`${API_URL}/solicitarAdiamento`, {
             method: 'POST',
-            mode: 'no-cors',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(dados)
         });
         
-        showToast('Solicitação enviada com sucesso! Aguarde autorização.', 'success');
-        fecharModal();
-        carregarAgendasUsuario();
+        const result = await response.json();
+        if (result.success) {
+            showToast('Solicitação enviada com sucesso! Aguarde autorização.', 'success');
+            fecharModal();
+            carregarAgendasUsuario();
+        } else {
+            showToast('Erro ao enviar solicitação: ' + (result.error || 'Erro desconhecido'), 'error');
+        }
     } catch (error) {
         showToast('Erro ao enviar solicitação', 'error');
+        console.error('Erro:', error);
     }
 }
 
 // Funções de Solicitações
 async function carregarSolicitacoes() {
     try {
-        const response = await fetch(`${SCRIPT_URL}?action=listarSolicitacoes`);
+        const response = await fetch(`${API_URL}/agendas`);
+        // Nota: As solicitações são carregadas separadamente
+        // Você pode adicionar um endpoint específico para solicitações
         const data = await response.json();
-        solicitacoes = data;
-        renderizarSolicitacoes(data);
-        atualizarBadge(data);
+        // Simular solicitações pendentes
+        const solicitacoesSimuladas = data
+            .filter(a => a.Status === 'Aguardando Autorização')
+            .map(a => ({
+                ID: a.ID,
+                'Agenda ID': a.ID,
+                Solicitante: 'Usuário',
+                'Nova Data': a.Dia,
+                'Novo Horário': a.Horário,
+                Status: 'Pendente'
+            }));
+        renderizarSolicitacoes(solicitacoesSimuladas);
+        atualizarBadge(solicitacoesSimuladas);
     } catch (error) {
         showToast('Erro ao carregar solicitações', 'error');
+        console.error('Erro:', error);
     }
 }
 
@@ -366,13 +407,13 @@ function renderizarSolicitacoes(solicitacoes) {
                         Solicitação de Adiamento
                     </h3>
                     <p style="font-size:14px;color:var(--gray-4);">
-                        <strong>Solicitante:</strong> ${s.Solicitante}
+                        <strong>Solicitante:</strong> ${s.Solicitante || 'Não informado'}
                     </p>
                     <p style="font-size:14px;color:var(--gray-4);">
                         <strong>Nova Data:</strong> ${formatDate(s['Nova Data'])} às ${s['Novo Horário']}
                     </p>
                     <p style="font-size:14px;color:var(--gray-4);">
-                        <strong>Agenda ID:</strong> ${s['Agenda ID']}
+                        <strong>Agenda ID:</strong> ${s['Agenda ID'] || s.ID}
                     </p>
                 </div>
                 <div style="display:flex;gap:8px;">
@@ -403,15 +444,25 @@ async function autorizarAdiamento(id) {
     if (!confirm('Deseja autorizar este adiamento?')) return;
     
     try {
-        await fetch(`${SCRIPT_URL}?action=autorizarAdiamento&id=${id}`, {
+        const response = await fetch(`${API_URL}/autorizarAdiamento`, {
             method: 'POST',
-            mode: 'no-cors'
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id })
         });
-        showToast('Adiamento autorizado com sucesso!', 'success');
-        carregarSolicitacoes();
-        carregarAgendasAdmin();
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('Adiamento autorizado com sucesso!', 'success');
+            carregarSolicitacoes();
+            carregarAgendasAdmin();
+        } else {
+            showToast('Erro ao autorizar adiamento: ' + (result.error || 'Erro desconhecido'), 'error');
+        }
     } catch (error) {
         showToast('Erro ao autorizar adiamento', 'error');
+        console.error('Erro:', error);
     }
 }
 
@@ -419,15 +470,25 @@ async function rejeitarAdiamento(id) {
     if (!confirm('Deseja rejeitar este adiamento?')) return;
     
     try {
-        await fetch(`${SCRIPT_URL}?action=rejeitarAdiamento&id=${id}`, {
+        const response = await fetch(`${API_URL}/rejeitarAdiamento`, {
             method: 'POST',
-            mode: 'no-cors'
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id })
         });
-        showToast('Adiamento rejeitado!', 'success');
-        carregarSolicitacoes();
-        carregarAgendasAdmin();
+        
+        const result = await response.json();
+        if (result.success) {
+            showToast('Adiamento rejeitado!', 'success');
+            carregarSolicitacoes();
+            carregarAgendasAdmin();
+        } else {
+            showToast('Erro ao rejeitar adiamento: ' + (result.error || 'Erro desconhecido'), 'error');
+        }
     } catch (error) {
         showToast('Erro ao rejeitar adiamento', 'error');
+        console.error('Erro:', error);
     }
 }
 
@@ -457,7 +518,6 @@ function getStatusClass(status) {
 }
 
 function showToast(message, type = 'info') {
-    // Criar toast
     const toast = document.createElement('div');
     toast.style.cssText = `
         position: fixed;
@@ -495,7 +555,6 @@ window.onclick = function(event) {
     }
 }
 
-// Fechar modal com ESC
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
         fecharModal();
