@@ -3,61 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Studio Dashboard</title>
+    <title>Agenda Pro | Dashboard</title>
+    
+    <!-- Fontes do Google (Inter) para um visual mais moderno -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Ícones FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Folha de estilos -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    
     <!-- ============ TELA DE LOGIN ============ -->
     <div id="loginScreen" class="screen active">
         <div class="login-container">
-            <div class="login-content">
+            <div class="login-card">
                 <div class="app-icon">
                     <div class="icon-wrapper">
                         <i class="fas fa-calendar-check"></i>
                     </div>
                 </div>
                 
-                <h1 class="app-title">Studio Dashboard</h1>
-                <p class="app-subtitle">Área restrita</p>
+                <h1 class="app-title">Agenda Pro</h1>
+                <p class="app-subtitle">Faça login para gerenciar suas agendas</p>
                 
                 <form id="loginForm" onsubmit="handleLogin(event)">
-                    <div class="input-group">
-                        <div class="input-icon">
-                            <i class="fas fa-user"></i>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <i class="fas fa-user input-icon"></i>
+                            <input type="text" id="username" placeholder="Usuário" required>
                         </div>
-                        <input type="text" id="username" placeholder="Usuário" required>
                     </div>
                     
-                    <div class="input-group">
-                        <div class="input-icon">
-                            <i class="fas fa-lock"></i>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <i class="fas fa-lock input-icon"></i>
+                            <input type="password" id="password" placeholder="Senha" required>
+                            <button type="button" class="toggle-password" onclick="togglePassword()">
+                                <i class="fas fa-eye"></i>
+                            </button>
                         </div>
-                        <input type="password" id="password" placeholder="Senha" required>
-                        <button type="button" class="toggle-password" onclick="togglePassword()">
-                            <i class="fas fa-eye"></i>
-                        </button>
                     </div>
                     
                     <button type="submit" class="btn-login">
-                        <i class="fas fa-arrow-left"></i>
-                        Entrar
+                        Acessar Sistema <i class="fas fa-arrow-right"></i>
                     </button>
                 </form>
                 
                 <div class="login-footer">
-                    <div class="divider">
-                        <span>Credenciais de teste</span>
-                    </div>
+                    <div class="divider"><span>Acesso de Teste</span></div>
                     <div class="creds">
-                        <span class="cred-item">
-                            <span class="cred-label">Admin</span>
-                            <span class="cred-value">admin / 123</span>
-                        </span>
-                        <span class="cred-item">
-                            <span class="cred-label">Usuário</span>
-                            <span class="cred-value">user / 123</span>
-                        </span>
+                        <span class="cred-item"><strong>Admin:</strong> admin / 123</span>
+                        <span class="cred-item"><strong>Usuário:</strong> user / 123</span>
                     </div>
                 </div>
             </div>
@@ -65,164 +66,208 @@
     </div>
 
     <!-- ============ TELA DO ADMIN ============ -->
-    <div id="adminScreen" class="screen">
-        <!-- Barra de Status iOS -->
-        <div class="status-bar">
-            <span class="time">9:41</span>
-            <div class="status-icons">
-                <i class="fas fa-signal"></i>
-                <i class="fas fa-wifi"></i>
-                <i class="fas fa-battery-three-quarters"></i>
+    <div id="adminScreen" class="screen layout-dashboard">
+        
+        <!-- Sidebar Navigation (Desktop) / Bottom Bar (Mobile) -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="icon-wrapper-small"><i class="fas fa-calendar-check"></i></div>
+                <h2>Painel Admin</h2>
             </div>
-        </div>
-
-        <!-- Header iOS -->
-        <header class="ios-header">
-            <div class="header-content">
-                <h1 class="page-title">Administrador</h1>
-                <button onclick="logout()" class="header-btn">
-                    <i class="fas fa-power-off"></i>
+            
+            <div class="sidebar-menu">
+                <button class="nav-item active" data-tab="dashboard" onclick="switchAdminTab('dashboard')">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-item" data-tab="nova" onclick="switchAdminTab('nova')">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Nova Agenda</span>
+                </button>
+                <button class="nav-item" data-tab="lista" onclick="switchAdminTab('lista')">
+                    <i class="fas fa-list-ul"></i>
+                    <span>Ver Agendas</span>
+                    <span class="badge" id="adminCount">0</span>
+                </button>
+                <button class="nav-item" data-tab="solicitacoes" onclick="switchAdminTab('solicitacoes')">
+                    <i class="fas fa-bell"></i>
+                    <span>Solicitações</span>
+                    <span class="badge danger" id="adminBadge">0</span>
                 </button>
             </div>
-        </header>
-
-        <!-- Navegação iOS -->
-        <nav class="ios-tab-bar">
-            <button class="tab-item active" onclick="switchAdminTab('dashboard')">
-                <i class="fas fa-chart-pie"></i>
-                <span>Dashboard</span>
-            </button>
-            <button class="tab-item" onclick="switchAdminTab('nova')">
-                <i class="fas fa-plus-circle"></i>
-                <span>Nova</span>
-            </button>
-            <button class="tab-item" onclick="switchAdminTab('lista')">
-                <i class="fas fa-list-ul"></i>
-                <span>Agendas</span>
-                <span class="tab-badge" id="adminCount">0</span>
-            </button>
-            <button class="tab-item" onclick="switchAdminTab('solicitacoes')">
-                <i class="fas fa-bell"></i>
-                <span>Solic.</span>
-                <span class="tab-badge danger" id="adminBadge">0</span>
+            
+            <button class="btn-logout" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Sair
             </button>
         </nav>
 
-        <!-- Conteúdo -->
-        <main class="ios-content">
-            <!-- Dashboard -->
-            <div id="adminDashboard" class="page active">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="statTotal">0</div>
-                        <div class="stat-label">Total</div>
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="top-header">
+                <h1 class="page-title" id="adminPageTitle">Dashboard</h1>
+                <div class="user-profile">
+                    <div class="avatar"><i class="fas fa-user-tie"></i></div>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                <!-- Dashboard -->
+                <div id="adminDashboard" class="admin-tab active">
+                    <div class="stats-grid">
+                        <div class="stat-card primary">
+                            <div class="stat-icon"><i class="fas fa-calendar"></i></div>
+                            <div class="stat-info">
+                                <span class="stat-label">Total de Agendas</span>
+                                <h3 class="stat-value" id="statTotal">0</h3>
+                            </div>
+                        </div>
+                        <div class="stat-card warning">
+                            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                            <div class="stat-info">
+                                <span class="stat-label">Pendentes</span>
+                                <h3 class="stat-value" id="statPendentes">0</h3>
+                            </div>
+                        </div>
+                        <div class="stat-card success">
+                            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                            <div class="stat-info">
+                                <span class="stat-label">Realizadas</span>
+                                <h3 class="stat-value" id="statRealizadas">0</h3>
+                            </div>
+                        </div>
+                        <div class="stat-card danger">
+                            <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+                            <div class="stat-info">
+                                <span class="stat-label">Canceladas</span>
+                                <h3 class="stat-value" id="statCanceladas">0</h3>
+                            </div>
+                        </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="statPendentes">0</div>
-                        <div class="stat-label">Pendentes</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="statRealizadas">0</div>
-                        <div class="stat-label">Realizadas</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="statCanceladas">0</div>
-                        <div class="stat-label">Canceladas</div>
+
+                    <div class="pro-card mt-4">
+                        <div class="card-header">
+                            <h3><i class="fas fa-hourglass-half"></i> Próximas Agendas</h3>
+                        </div>
+                        <div id="proximasAgendas" class="card-body">
+                            <div class="empty-state">
+                                <i class="fas fa-inbox"></i>
+                                <p>Nenhuma agenda próxima</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="ios-card">
-                    <div class="card-header">
-                        <h3>Próximas Agendas</h3>
-                        <span class="card-badge">7 dias</span>
-                    </div>
-                    <div id="proximasAgendas">
-                        <div class="empty-state">
-                            <i class="fas fa-calendar-plus"></i>
-                            <p>Nenhuma agenda próxima</p>
+                <!-- Nova Agenda -->
+                <div id="adminNova" class="admin-tab">
+                    <div class="pro-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-plus"></i> Cadastrar Agenda</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="agendaForm" class="pro-form" onsubmit="criarAgenda(event)">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Data</label>
+                                        <input type="date" id="dia" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Horário</label>
+                                        <input type="time" id="horario" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Tipo</label>
+                                        <select id="tipo" required>
+                                            <option value="Reunião">Reunião</option>
+                                            <option value="Palestra">Palestra</option>
+                                            <option value="Workshop">Workshop</option>
+                                            <option value="Treinamento">Treinamento</option>
+                                            <option value="Evento">Evento</option>
+                                            <option value="Outro">Outro</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Status Inicial</label>
+                                        <select id="status">
+                                            <option value="Pendente">Pendente</option>
+                                            <option value="Realizada">Realizada</option>
+                                            <option value="Cancelada">Cancelada</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Participantes</label>
+                                    <input type="text" id="participantes" placeholder="Ex: João, Maria, Marcos..." required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Local (Nome)</label>
+                                    <input type="text" id="local" placeholder="Ex: Sala de Reuniões 02" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Endereço Completo</label>
+                                    <input type="text" id="endereco" placeholder="Ex: Av. Principal, 1000 - Centro" required>
+                                </div>
+                                
+                                <button type="submit" class="btn-primary w-100">
+                                    <i class="fas fa-save"></i> Salvar Agenda
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Nova Agenda -->
-            <div id="adminNova" class="page">
-                <div class="ios-card">
-                    <h3 class="card-title">Nova Agenda</h3>
-                    <form id="agendaForm" onsubmit="criarAgenda(event)">
-                        <div class="form-group">
-                            <label>Data</label>
-                            <input type="date" id="dia" required>
+                <!-- Lista Agendas -->
+                <div id="adminLista" class="admin-tab">
+                    <div class="pro-card">
+                        <div class="card-header flex-between">
+                            <h3><i class="fas fa-list"></i> Todas as Agendas</h3>
+                            <span class="badge" id="totalAgendas">0</span>
                         </div>
-                        <div class="form-group">
-                            <label>Horário</label>
-                            <input type="time" id="horario" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Tipo</label>
-                            <select id="tipo" required>
-                                <option value="Reunião">Reunião</option>
-                                <option value="Palestra">Palestra</option>
-                                <option value="Workshop">Workshop</option>
-                                <option value="Treinamento">Treinamento</option>
-                                <option value="Evento">Evento</option>
-                                <option value="Outro">Outro</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Participantes</label>
-                            <input type="text" id="participantes" placeholder="João, Maria" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Local</label>
-                            <input type="text" id="local" placeholder="Nome do local" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Endereço</label>
-                            <input type="text" id="endereco" placeholder="Rua, número, bairro" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Status</label>
-                            <select id="status">
-                                <option value="Pendente">Pendente</option>
-                                <option value="Realizada">Realizada</option>
-                                <option value="Cancelada">Cancelada</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn-primary">
-                            <i class="fas fa-check"></i> Criar
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Lista Agendas -->
-            <div id="adminLista" class="page">
-                <div class="ios-card">
-                    <div class="list-header">
-                        <h3>Todas as Agendas</h3>
-                        <span class="list-count" id="totalAgendas">0</span>
-                    </div>
-                    <div class="list-items" id="adminTableBody">
-                        <div class="empty-state">
-                            <i class="fas fa-inbox"></i>
-                            <p>Nenhuma agenda</p>
+                        <div class="card-body no-padding">
+                            <div class="table-responsive">
+                                <table class="pro-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Horário</th>
+                                            <th>Tipo</th>
+                                            <th>Participantes</th>
+                                            <th>Local</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminTableBody">
+                                        <tr>
+                                            <td colspan="7">
+                                                <div class="empty-state">
+                                                    <i class="fas fa-folder-open"></i>
+                                                    <p>Nenhuma agenda cadastrada</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Solicitações -->
-            <div id="adminSolicitacoes" class="page">
-                <div class="ios-card">
-                    <div class="list-header">
-                        <h3>Solicitações</h3>
-                        <span class="list-count" id="solicitacoesCount">0</span>
-                    </div>
-                    <div id="solicitacoesList">
-                        <div class="empty-state">
-                            <i class="fas fa-check-circle"></i>
-                            <p>Nenhuma solicitação</p>
+                <!-- Solicitações -->
+                <div id="adminSolicitacoes" class="admin-tab">
+                    <div class="pro-card">
+                        <div class="card-header flex-between">
+                            <h3><i class="fas fa-bell"></i> Aprovações Pendentes</h3>
+                            <span class="badge danger" id="solicitacoesCount">0</span>
+                        </div>
+                        <div class="card-body bg-light" id="solicitacoesList">
+                            <div class="empty-state">
+                                <i class="fas fa-check-double"></i>
+                                <p>Tudo em dia! Nenhuma solicitação pendente.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -231,73 +276,74 @@
     </div>
 
     <!-- ============ TELA DO USUÁRIO ============ -->
-    <div id="userScreen" class="screen">
-        <!-- Barra de Status iOS -->
-        <div class="status-bar">
-            <span class="time">9:41</span>
-            <div class="status-icons">
-                <i class="fas fa-signal"></i>
-                <i class="fas fa-wifi"></i>
-                <i class="fas fa-battery-three-quarters"></i>
+    <div id="userScreen" class="screen layout-dashboard">
+        
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="icon-wrapper-small"><i class="fas fa-calendar-check"></i></div>
+                <h2>Meu Painel</h2>
             </div>
-        </div>
-
-        <!-- Header iOS -->
-        <header class="ios-header">
-            <div class="header-content">
-                <h1 class="page-title">Minhas Agendas</h1>
-                <button onclick="logout()" class="header-btn">
-                    <i class="fas fa-power-off"></i>
+            
+            <div class="sidebar-menu">
+                <button class="nav-item active" data-tab="minhas" onclick="switchUserTab('minhas')">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Minhas Agendas</span>
+                    <span class="badge" id="userCount">0</span>
+                </button>
+                <button class="nav-item" data-tab="historico" onclick="switchUserTab('historico')">
+                    <i class="fas fa-history"></i>
+                    <span>Histórico</span>
                 </button>
             </div>
-        </header>
-
-        <!-- Navegação iOS -->
-        <nav class="ios-tab-bar">
-            <button class="tab-item active" onclick="switchUserTab('minhas')">
-                <i class="fas fa-calendar-alt"></i>
-                <span>Minhas</span>
-                <span class="tab-badge" id="userCount">0</span>
-            </button>
-            <button class="tab-item" onclick="switchUserTab('historico')">
-                <i class="fas fa-history"></i>
-                <span>Histórico</span>
+            
+            <button class="btn-logout" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Sair
             </button>
         </nav>
 
-        <!-- Conteúdo -->
-        <main class="ios-content">
-            <!-- Minhas Agendas -->
-            <div id="userMinhas" class="page active">
-                <div class="filter-bar">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="searchInput" placeholder="Buscar agenda..." oninput="filterAgendas()">
-                    </div>
-                    <select id="statusFilter" class="filter-select" onchange="filterAgendas()">
-                        <option value="all">Todos</option>
-                        <option value="Pendente">Pendente</option>
-                        <option value="Realizada">Realizada</option>
-                        <option value="Cancelada">Cancelada</option>
-                    </select>
+        <main class="main-content">
+            <header class="top-header">
+                <h1 class="page-title" id="userPageTitle">Minhas Agendas</h1>
+                <div class="user-profile">
+                    <div class="avatar"><i class="fas fa-user"></i></div>
                 </div>
-                
-                <div id="cardsContainer" class="cards-grid">
-                    <div class="empty-state">
-                        <i class="fas fa-calendar-plus"></i>
-                        <p>Nenhuma agenda</p>
-                    </div>
-                </div>
-            </div>
+            </header>
 
-            <!-- Histórico -->
-            <div id="userHistorico" class="page">
-                <div class="ios-card">
-                    <h3 class="card-title">Histórico</h3>
-                    <div id="historicoList">
-                        <div class="empty-state">
-                            <i class="fas fa-history"></i>
-                            <p>Nenhum histórico</p>
+            <div class="content-wrapper">
+                <!-- Minhas Agendas -->
+                <div id="userMinhas" class="user-tab active">
+                    <div class="filter-bar">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchInput" placeholder="Buscar local, tipo ou participante..." oninput="filterAgendas()">
+                        </div>
+                        <select id="statusFilter" class="filter-select" onchange="filterAgendas()">
+                            <option value="all">Todos os Status</option>
+                            <option value="Pendente">Pendentes</option>
+                            <option value="Realizada">Realizadas</option>
+                            <option value="Cancelada">Canceladas</option>
+                        </select>
+                    </div>
+                    
+                    <div id="cardsContainer" class="cards-grid">
+                        <div class="empty-state w-100">
+                            <i class="fas fa-inbox"></i>
+                            <p>Nenhuma agenda disponível</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Histórico -->
+                <div id="userHistorico" class="user-tab">
+                    <div class="pro-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-archive"></i> Histórico de Agendas</h3>
+                        </div>
+                        <div class="card-body bg-light" id="historicoList">
+                            <div class="empty-state">
+                                <i class="fas fa-history"></i>
+                                <p>Nenhum histórico disponível</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -308,38 +354,40 @@
     <!-- ============ MODAL ADIAR ============ -->
     <div id="modalAdiar" class="modal">
         <div class="modal-backdrop" onclick="fecharModal()"></div>
-        <div class="modal-sheet">
-            <div class="modal-handle"></div>
+        <div class="modal-sheet pro-card">
             <div class="modal-header">
-                <h3>Solicitar Adiamento</h3>
-                <button onclick="fecharModal()" class="modal-close">
-                    <i class="fas fa-times"></i>
-                </button>
+                <h3><i class="fas fa-clock"></i> Solicitar Adiamento</h3>
+                <button onclick="fecharModal()" class="modal-close"><i class="fas fa-times"></i></button>
             </div>
-            <form id="adiarForm" onsubmit="solicitarAdiamento(event)">
-                <input type="hidden" id="agendaIdAdiar">
-                <div class="form-group">
-                    <label>Nova Data</label>
-                    <input type="date" id="novaData" required>
-                </div>
-                <div class="form-group">
-                    <label>Novo Horário</label>
-                    <input type="time" id="novoHorario" required>
-                </div>
-                <div class="form-group">
-                    <label>Seu Nome</label>
-                    <input type="text" id="solicitante" placeholder="Digite seu nome" required>
-                </div>
-                <button type="submit" class="btn-primary">
-                    <i class="fas fa-paper-plane"></i> Solicitar
-                </button>
-            </form>
+            <div class="modal-body">
+                <form id="adiarForm" class="pro-form" onsubmit="solicitarAdiamento(event)">
+                    <input type="hidden" id="agendaIdAdiar">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nova Data sugerida</label>
+                            <input type="date" id="novaData" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Novo Horário</label>
+                            <input type="time" id="novoHorario" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Seu Nome (Solicitante)</label>
+                        <input type="text" id="solicitante" placeholder="Quem está solicitando?" required>
+                    </div>
+                    <button type="submit" class="btn-primary w-100 mt-2">
+                        Enviar Solicitação <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
     <!-- ============ TOAST ============ -->
     <div id="toastContainer"></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
