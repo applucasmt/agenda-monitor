@@ -10,7 +10,7 @@ let agendas = [];
 let solicitacoes = [];
 
 // Google Apps Script URL - Substitua pela sua URL
-const SCRIPT_URL = 'https://script.google.com/macros/s/SEU_SCRIPT_ID/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx2yIR19t_Sn9VemtPjkkGDJdjZNZE5dnZoqy1kfEGDzvrsqp9493dWuT5p4jmgdgcq/exec';
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
