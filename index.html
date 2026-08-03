@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema de Agenda</title>
+    <title>Sistema de Agenda Premium</title>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -42,7 +44,6 @@
 
     <!-- ==================== TELA DO ADMIN ==================== -->
     <div id="adminScreen" class="screen">
-        <!-- Header -->
         <header class="app-header">
             <div class="header-content">
                 <div class="header-left">
@@ -53,14 +54,13 @@
                     <span class="user-badge">
                         <i class="fas fa-user-shield"></i> Admin
                     </span>
-                    <button onclick="logout()" class="btn-logout">
+                    <button onclick="logout()" class="btn-logout" title="Sair">
                         <i class="fas fa-sign-out-alt"></i>
                     </button>
                 </div>
             </div>
         </header>
 
-        <!-- Navegação Admin -->
         <nav class="admin-nav">
             <button class="nav-tab active" onclick="switchAdminTab('nova')">
                 <i class="fas fa-plus-circle"></i> Nova Agenda
@@ -74,7 +74,6 @@
             </button>
         </nav>
 
-        <!-- Conteúdo Admin -->
         <div class="admin-content">
             <!-- Nova Agenda -->
             <div id="adminNova" class="admin-tab active">
@@ -109,7 +108,7 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label><i class="fas fa-map-marker-alt"></i> Local</label>
-                                <input type="text" id="local" placeholder="Nome do local" required>
+                                <input type="text" id="local" placeholder="Nome do local (Ex: Sala 1)" required>
                             </div>
                             <div class="form-group">
                                 <label><i class="fas fa-map-pin"></i> Status</label>
@@ -142,8 +141,7 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Data</th>
-                                    <th>Horário</th>
+                                    <th>Data & Hora</th>
                                     <th>Tipo</th>
                                     <th>Participantes</th>
                                     <th>Local</th>
@@ -152,12 +150,7 @@
                                 </tr>
                             </thead>
                             <tbody id="adminTableBody">
-                                <tr>
-                                    <td colspan="7" class="empty-state">
-                                        <i class="fas fa-inbox"></i>
-                                        <p>Nenhuma agenda cadastrada</p>
-                                    </td>
-                                </tr>
+                                <!-- Preenchido pelo JS -->
                             </tbody>
                         </table>
                     </div>
@@ -169,10 +162,7 @@
                 <div class="solicitacoes-card">
                     <h3><i class="fas fa-bell"></i> Solicitações de Adiamento</h3>
                     <div id="solicitacoesList">
-                        <div class="empty-state">
-                            <i class="fas fa-check-circle"></i>
-                            <p>Nenhuma solicitação pendente</p>
-                        </div>
+                        <!-- Preenchido pelo JS -->
                     </div>
                 </div>
             </div>
@@ -181,7 +171,6 @@
 
     <!-- ==================== TELA DO USUÁRIO ==================== -->
     <div id="userScreen" class="screen">
-        <!-- Header -->
         <header class="app-header">
             <div class="header-content">
                 <div class="header-left">
@@ -192,18 +181,17 @@
                     <span class="user-badge">
                         <i class="fas fa-user"></i> Usuário
                     </span>
-                    <button onclick="logout()" class="btn-logout">
+                    <button onclick="logout()" class="btn-logout" title="Sair">
                         <i class="fas fa-sign-out-alt"></i>
                     </button>
                 </div>
             </div>
         </header>
 
-        <!-- Filtros -->
         <div class="user-filters">
             <div class="filter-group">
                 <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Buscar agenda..." oninput="filterAgendas()">
+                <input type="text" id="searchInput" placeholder="Buscar por tipo, local ou participante..." oninput="filterAgendas()">
             </div>
             <div class="filter-group">
                 <i class="fas fa-filter"></i>
@@ -212,21 +200,16 @@
                     <option value="Pendente">⏳ Pendente</option>
                     <option value="Realizada">✅ Realizada</option>
                     <option value="Cancelada">❌ Cancelada</option>
-                    <option value="Aguardando Autorização">⏰ Aguardando Autorização</option>
                 </select>
             </div>
-            <button onclick="refreshAgendas()" class="btn-refresh">
+            <button onclick="carregarAgendasUsuario()" class="btn-refresh" title="Atualizar">
                 <i class="fas fa-sync"></i>
             </button>
         </div>
 
-        <!-- Cards -->
         <div class="user-content">
             <div id="cardsContainer" class="cards-grid">
-                <div class="empty-state">
-                    <i class="fas fa-calendar-plus"></i>
-                    <p>Nenhuma agenda disponível</p>
-                </div>
+                <!-- Preenchido pelo JS -->
             </div>
         </div>
     </div>
@@ -251,8 +234,8 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label><i class="fas fa-user"></i> Seu Nome</label>
-                    <input type="text" id="solicitante" placeholder="Digite seu nome" required>
+                    <label><i class="fas fa-comment-dots"></i> Motivo (Opcional)</label>
+                    <input type="text" id="motivoAdiar" placeholder="Por que deseja adiar?">
                 </div>
                 <button type="submit" class="btn-primary">
                     <i class="fas fa-paper-plane"></i> Enviar Solicitação
