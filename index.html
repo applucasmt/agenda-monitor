@@ -2,392 +2,130 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Agenda Pro | Dashboard</title>
-    
-    <!-- Fontes do Google (Inter) para um visual mais moderno -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Ícones FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
-    <!-- Folha de estilos -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#007AFF">
+    <title>Agenda Monitor</title>
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
-    
-    <!-- ============ TELA DE LOGIN ============ -->
-    <div id="loginScreen" class="screen active">
-        <div class="login-container">
-            <div class="login-card">
-                <div class="app-icon">
-                    <div class="icon-wrapper">
-                        <i class="fas fa-calendar-check"></i>
-                    </div>
+    <div id="app">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1>📅 Agenda Monitor</h1>
+                <div class="user-controls">
+                    <button id="adminToggle" class="btn-toggle">👤 Admin</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Admin Panel -->
+            <section id="adminPanel" class="panel hidden">
+                <div class="panel-header">
+                    <h2>Painel Administrativo</h2>
+                    <button id="addAgendaBtn" class="btn-primary">+ Nova Agenda</button>
                 </div>
                 
-                <h1 class="app-title">Agenda Pro</h1>
-                <p class="app-subtitle">Faça login para gerenciar suas agendas</p>
-                
-                <form id="loginForm" onsubmit="handleLogin(event)">
-                    <div class="form-group">
-                        <div class="input-group">
-                            <i class="fas fa-user input-icon"></i>
-                            <input type="text" id="username" placeholder="Usuário" required>
+                <!-- Formulário de Agenda -->
+                <div id="agendaForm" class="form-container hidden">
+                    <h3>Nova Agenda</h3>
+                    <form id="agendaFormElement">
+                        <div class="form-group">
+                            <label for="agendaData">Data</label>
+                            <input type="date" id="agendaData" required>
                         </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <div class="input-group">
-                            <i class="fas fa-lock input-icon"></i>
-                            <input type="password" id="password" placeholder="Senha" required>
-                            <button type="button" class="toggle-password" onclick="togglePassword()">
-                                <i class="fas fa-eye"></i>
-                            </button>
+                        <div class="form-group">
+                            <label for="agendaHorario">Horário</label>
+                            <input type="time" id="agendaHorario" required>
                         </div>
-                    </div>
-                    
-                    <button type="submit" class="btn-login">
-                        Acessar Sistema <i class="fas fa-arrow-right"></i>
-                    </button>
-                </form>
-                
-                <div class="login-footer">
-                    <div class="divider"><span>Acesso de Teste</span></div>
-                    <div class="creds">
-                        <span class="cred-item"><strong>Admin:</strong> admin / 123</span>
-                        <span class="cred-item"><strong>Usuário:</strong> user / 123</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============ TELA DO ADMIN ============ -->
-    <div id="adminScreen" class="screen layout-dashboard">
-        
-        <!-- Sidebar Navigation (Desktop) / Bottom Bar (Mobile) -->
-        <nav class="sidebar">
-            <div class="sidebar-header">
-                <div class="icon-wrapper-small"><i class="fas fa-calendar-check"></i></div>
-                <h2>Painel Admin</h2>
-            </div>
-            
-            <div class="sidebar-menu">
-                <button class="nav-item active" data-tab="dashboard" onclick="switchAdminTab('dashboard')">
-                    <i class="fas fa-chart-pie"></i>
-                    <span>Dashboard</span>
-                </button>
-                <button class="nav-item" data-tab="nova" onclick="switchAdminTab('nova')">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>Nova Agenda</span>
-                </button>
-                <button class="nav-item" data-tab="lista" onclick="switchAdminTab('lista')">
-                    <i class="fas fa-list-ul"></i>
-                    <span>Ver Agendas</span>
-                    <span class="badge" id="adminCount">0</span>
-                </button>
-                <button class="nav-item" data-tab="solicitacoes" onclick="switchAdminTab('solicitacoes')">
-                    <i class="fas fa-bell"></i>
-                    <span>Solicitações</span>
-                    <span class="badge danger" id="adminBadge">0</span>
-                </button>
-            </div>
-            
-            <button class="btn-logout" onclick="logout()">
-                <i class="fas fa-sign-out-alt"></i> Sair
-            </button>
-        </nav>
-
-        <!-- Main Content Area -->
-        <main class="main-content">
-            <header class="top-header">
-                <h1 class="page-title" id="adminPageTitle">Dashboard</h1>
-                <div class="user-profile">
-                    <div class="avatar"><i class="fas fa-user-tie"></i></div>
-                </div>
-            </header>
-
-            <div class="content-wrapper">
-                <!-- Dashboard -->
-                <div id="adminDashboard" class="admin-tab active">
-                    <div class="stats-grid">
-                        <div class="stat-card primary">
-                            <div class="stat-icon"><i class="fas fa-calendar"></i></div>
-                            <div class="stat-info">
-                                <span class="stat-label">Total de Agendas</span>
-                                <h3 class="stat-value" id="statTotal">0</h3>
-                            </div>
+                        <div class="form-group">
+                            <label for="agendaTipo">Tipo de Agenda</label>
+                            <input type="text" id="agendaTipo" placeholder="Ex: Reunião, Palestra..." required>
                         </div>
-                        <div class="stat-card warning">
-                            <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                            <div class="stat-info">
-                                <span class="stat-label">Pendentes</span>
-                                <h3 class="stat-value" id="statPendentes">0</h3>
-                            </div>
+                        <div class="form-group">
+                            <label for="agendaParticipantes">Participantes</label>
+                            <input type="text" id="agendaParticipantes" placeholder="Nome dos participantes (separados por vírgula)" required>
                         </div>
-                        <div class="stat-card success">
-                            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                            <div class="stat-info">
-                                <span class="stat-label">Realizadas</span>
-                                <h3 class="stat-value" id="statRealizadas">0</h3>
-                            </div>
+                        <div class="form-group">
+                            <label for="agendaLocal">Local</label>
+                            <input type="text" id="agendaLocal" placeholder="Endereço completo" required>
                         </div>
-                        <div class="stat-card danger">
-                            <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
-                            <div class="stat-info">
-                                <span class="stat-label">Canceladas</span>
-                                <h3 class="stat-value" id="statCanceladas">0</h3>
-                            </div>
+                        <div class="form-group">
+                            <label for="agendaStatus">Status</label>
+                            <select id="agendaStatus">
+                                <option value="Pendente">Pendente</option>
+                                <option value="Realizada">Realizada</option>
+                                <option value="Cancelada">Cancelada</option>
+                                <option value="Adiada">Adiada</option>
+                            </select>
                         </div>
-                    </div>
-
-                    <div class="pro-card mt-4">
-                        <div class="card-header">
-                            <h3><i class="fas fa-hourglass-half"></i> Próximas Agendas</h3>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-success">Salvar</button>
+                            <button type="button" id="cancelForm" class="btn-danger">Cancelar</button>
                         </div>
-                        <div id="proximasAgendas" class="card-body">
-                            <div class="empty-state">
-                                <i class="fas fa-inbox"></i>
-                                <p>Nenhuma agenda próxima</p>
-                            </div>
-                        </div>
-                    </div>
+                    </form>
                 </div>
 
-                <!-- Nova Agenda -->
-                <div id="adminNova" class="admin-tab">
-                    <div class="pro-card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-plus"></i> Cadastrar Agenda</h3>
-                        </div>
-                        <div class="card-body">
-                            <form id="agendaForm" class="pro-form" onsubmit="criarAgenda(event)">
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label>Data</label>
-                                        <input type="date" id="dia" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Horário</label>
-                                        <input type="time" id="horario" required>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label>Tipo</label>
-                                        <select id="tipo" required>
-                                            <option value="Reunião">Reunião</option>
-                                            <option value="Palestra">Palestra</option>
-                                            <option value="Workshop">Workshop</option>
-                                            <option value="Treinamento">Treinamento</option>
-                                            <option value="Evento">Evento</option>
-                                            <option value="Outro">Outro</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Status Inicial</label>
-                                        <select id="status">
-                                            <option value="Pendente">Pendente</option>
-                                            <option value="Realizada">Realizada</option>
-                                            <option value="Cancelada">Cancelada</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Participantes</label>
-                                    <input type="text" id="participantes" placeholder="Ex: João, Maria, Marcos..." required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Local (Nome)</label>
-                                    <input type="text" id="local" placeholder="Ex: Sala de Reuniões 02" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Endereço Completo</label>
-                                    <input type="text" id="endereco" placeholder="Ex: Av. Principal, 1000 - Centro" required>
-                                </div>
-                                
-                                <button type="submit" class="btn-primary w-100">
-                                    <i class="fas fa-save"></i> Salvar Agenda
-                                </button>
-                            </form>
-                        </div>
-                    </div>
+                <!-- Lista de Agendas (Admin) -->
+                <div id="adminAgendaList" class="agenda-list">
+                    <!-- Cards serão gerados aqui -->
                 </div>
+            </section>
 
-                <!-- Lista Agendas -->
-                <div id="adminLista" class="admin-tab">
-                    <div class="pro-card">
-                        <div class="card-header flex-between">
-                            <h3><i class="fas fa-list"></i> Todas as Agendas</h3>
-                            <span class="badge" id="totalAgendas">0</span>
-                        </div>
-                        <div class="card-body no-padding">
-                            <div class="table-responsive">
-                                <table class="pro-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Data</th>
-                                            <th>Horário</th>
-                                            <th>Tipo</th>
-                                            <th>Participantes</th>
-                                            <th>Local</th>
-                                            <th>Status</th>
-                                            <th>Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="adminTableBody">
-                                        <tr>
-                                            <td colspan="7">
-                                                <div class="empty-state">
-                                                    <i class="fas fa-folder-open"></i>
-                                                    <p>Nenhuma agenda cadastrada</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Solicitações -->
-                <div id="adminSolicitacoes" class="admin-tab">
-                    <div class="pro-card">
-                        <div class="card-header flex-between">
-                            <h3><i class="fas fa-bell"></i> Aprovações Pendentes</h3>
-                            <span class="badge danger" id="solicitacoesCount">0</span>
-                        </div>
-                        <div class="card-body bg-light" id="solicitacoesList">
-                            <div class="empty-state">
-                                <i class="fas fa-check-double"></i>
-                                <p>Tudo em dia! Nenhuma solicitação pendente.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- ============ TELA DO USUÁRIO ============ -->
-    <div id="userScreen" class="screen layout-dashboard">
-        
-        <nav class="sidebar">
-            <div class="sidebar-header">
-                <div class="icon-wrapper-small"><i class="fas fa-calendar-check"></i></div>
-                <h2>Meu Painel</h2>
-            </div>
-            
-            <div class="sidebar-menu">
-                <button class="nav-item active" data-tab="minhas" onclick="switchUserTab('minhas')">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span>Minhas Agendas</span>
-                    <span class="badge" id="userCount">0</span>
-                </button>
-                <button class="nav-item" data-tab="historico" onclick="switchUserTab('historico')">
-                    <i class="fas fa-history"></i>
-                    <span>Histórico</span>
-                </button>
-            </div>
-            
-            <button class="btn-logout" onclick="logout()">
-                <i class="fas fa-sign-out-alt"></i> Sair
-            </button>
-        </nav>
-
-        <main class="main-content">
-            <header class="top-header">
-                <h1 class="page-title" id="userPageTitle">Minhas Agendas</h1>
-                <div class="user-profile">
-                    <div class="avatar"><i class="fas fa-user"></i></div>
-                </div>
-            </header>
-
-            <div class="content-wrapper">
-                <!-- Minhas Agendas -->
-                <div id="userMinhas" class="user-tab active">
-                    <div class="filter-bar">
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="searchInput" placeholder="Buscar local, tipo ou participante..." oninput="filterAgendas()">
-                        </div>
-                        <select id="statusFilter" class="filter-select" onchange="filterAgendas()">
-                            <option value="all">Todos os Status</option>
+            <!-- User Panel -->
+            <section id="userPanel" class="panel">
+                <div class="panel-header">
+                    <h2>Minhas Agendas</h2>
+                    <div class="filter-controls">
+                        <select id="statusFilter">
+                            <option value="all">Todos</option>
                             <option value="Pendente">Pendentes</option>
                             <option value="Realizada">Realizadas</option>
                             <option value="Cancelada">Canceladas</option>
+                            <option value="Adiada">Adiadas</option>
                         </select>
                     </div>
-                    
-                    <div id="cardsContainer" class="cards-grid">
-                        <div class="empty-state w-100">
-                            <i class="fas fa-inbox"></i>
-                            <p>Nenhuma agenda disponível</p>
-                        </div>
-                    </div>
                 </div>
-
-                <!-- Histórico -->
-                <div id="userHistorico" class="user-tab">
-                    <div class="pro-card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-archive"></i> Histórico de Agendas</h3>
-                        </div>
-                        <div class="card-body bg-light" id="historicoList">
-                            <div class="empty-state">
-                                <i class="fas fa-history"></i>
-                                <p>Nenhum histórico disponível</p>
-                            </div>
-                        </div>
-                    </div>
+                
+                <!-- Lista de Agendas (User) -->
+                <div id="userAgendaList" class="agenda-list">
+                    <!-- Cards serão gerados aqui -->
                 </div>
-            </div>
+            </section>
         </main>
-    </div>
 
-    <!-- ============ MODAL ADIAR ============ -->
-    <div id="modalAdiar" class="modal">
-        <div class="modal-backdrop" onclick="fecharModal()"></div>
-        <div class="modal-sheet pro-card">
-            <div class="modal-header">
-                <h3><i class="fas fa-clock"></i> Solicitar Adiamento</h3>
-                <button onclick="fecharModal()" class="modal-close"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="modal-body">
-                <form id="adiarForm" class="pro-form" onsubmit="solicitarAdiamento(event)">
-                    <input type="hidden" id="agendaIdAdiar">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Nova Data sugerida</label>
-                            <input type="date" id="novaData" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Novo Horário</label>
-                            <input type="time" id="novoHorario" required>
-                        </div>
+        <!-- Modal para Adiamento -->
+        <div id="rescheduleModal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Solicitar Adiamento</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <form id="rescheduleForm">
+                    <div class="form-group">
+                        <label for="novaData">Nova Data</label>
+                        <input type="date" id="novaData" required>
                     </div>
                     <div class="form-group">
-                        <label>Seu Nome (Solicitante)</label>
-                        <input type="text" id="solicitante" placeholder="Quem está solicitando?" required>
+                        <label for="novoHorario">Novo Horário</label>
+                        <input type="time" id="novoHorario" required>
                     </div>
-                    <button type="submit" class="btn-primary w-100 mt-2">
-                        Enviar Solicitação <i class="fas fa-paper-plane"></i>
-                    </button>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-success">Solicitar Adiamento</button>
+                        <button type="button" class="btn-danger modal-close">Cancelar</button>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- ============ TOAST ============ -->
-    <div id="toastContainer"></div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
