@@ -3,77 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#007AFF">
-    <title>Agenda Monitor</title>
+    <meta name="theme-color" content="#6C63FF">
+    <title>AgendaPro 2026</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="app">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="header-content">
-                <h1>📅 Agenda Monitor</h1>
-                <div class="user-controls">
-                    <button id="adminToggle" class="btn-toggle">👤 Admin</button>
+        <!-- Floating Navigation -->
+        <nav class="floating-nav">
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <div class="brand-icon">📅</div>
+                    <span class="brand-text">AgendaPro</span>
+                </div>
+                <div class="nav-actions">
+                    <button id="themeToggle" class="nav-btn" aria-label="Toggle theme">
+                        <span class="icon">🌙</span>
+                    </button>
+                    <button id="adminToggle" class="nav-btn admin-btn">
+                        <span class="icon">👤</span>
+                        <span class="btn-text">Admin</span>
+                    </button>
                 </div>
             </div>
-        </header>
+        </nav>
 
         <!-- Main Content -->
-        <main class="app-main">
+        <main class="main-content">
+            <!-- Hero Section -->
+            <section class="hero-section">
+                <div class="hero-content">
+                    <h1 class="hero-title">
+                        <span class="gradient-text">Gerencie</span> suas agendas
+                        <span class="highlight">em um só lugar</span>
+                    </h1>
+                    <p class="hero-subtitle">Organize, acompanhe e otimize seus compromissos com inteligência</p>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat-card">
+                        <span class="stat-number" id="totalAgendas">0</span>
+                        <span class="stat-label">Total</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="pendingAgendas">0</span>
+                        <span class="stat-label">Pendentes</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="completedAgendas">0</span>
+                        <span class="stat-label">Realizadas</span>
+                    </div>
+                </div>
+            </section>
+
             <!-- Admin Panel -->
-            <section id="adminPanel" class="panel hidden">
+            <section id="adminPanel" class="panel glass-panel hidden">
                 <div class="panel-header">
-                    <h2>Painel Administrativo</h2>
-                    <button id="addAgendaBtn" class="btn-primary">+ Nova Agenda</button>
+                    <div class="panel-title-group">
+                        <h2 class="panel-title">🎛️ Painel Administrativo</h2>
+                        <span class="panel-badge">Admin</span>
+                    </div>
+                    <button id="addAgendaBtn" class="btn-primary btn-glow">
+                        <span class="icon">+</span>
+                        Nova Agenda
+                    </button>
                 </div>
                 
-                <!-- Formulário de Agenda -->
+                <!-- Formulário Moderno -->
                 <div id="agendaForm" class="form-container hidden">
-                    <h3>Nova Agenda</h3>
-                    <form id="agendaFormElement">
-                        <div class="form-group">
-                            <label for="agendaData">Data</label>
-                            <input type="date" id="agendaData" required>
+                    <div class="form-card">
+                        <div class="form-header">
+                            <h3 class="form-title">📝 Criar Nova Agenda</h3>
+                            <button id="cancelForm" class="btn-icon-only">
+                                <span class="icon">✕</span>
+                            </button>
                         </div>
-                        <div class="form-group">
-                            <label for="agendaHorario">Horário</label>
-                            <input type="time" id="agendaHorario" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="agendaTipo">Tipo de Agenda</label>
-                            <input type="text" id="agendaTipo" placeholder="Ex: Reunião, Palestra..." required>
-                        </div>
-                        <div class="form-group">
-                            <label for="agendaParticipantes">Participantes</label>
-                            <input type="text" id="agendaParticipantes" placeholder="Nome dos participantes (separados por vírgula)" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="agendaLocal">Local</label>
-                            <input type="text" id="agendaLocal" placeholder="Endereço completo" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="agendaStatus">Status</label>
-                            <select id="agendaStatus">
-                                <option value="Pendente">Pendente</option>
-                                <option value="Realizada">Realizada</option>
-                                <option value="Cancelada">Cancelada</option>
-                                <option value="Adiada">Adiada</option>
-                            </select>
-                        </div>
-                        <div class="form-actions">
-                            <button type="submit" class="btn-success">Salvar</button>
-                            <button type="button" id="cancelForm" class="btn-danger">Cancelar</button>
-                        </div>
-                    </form>
+                        <form id="agendaFormElement" class="modern-form">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="agendaData">
+                                        <span class="label-icon">📅</span>
+                                        Data
+                                    </label>
+                                    <input type="date" id="agendaData" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="agendaHorario">
+                                        <span class="label-icon">⏰</span>
+                                        Horário
+                                    </label>
+                                    <input type="time" id="agendaHorario" required>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label for="agendaTipo">
+                                        <span class="label-icon">🏷️</span>
+                                        Tipo de Agenda
+                                    </label>
+                                    <input type="text" id="agendaTipo" placeholder="Ex: Reunião, Palestra, Workshop..." required>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label for="agendaParticipantes">
+                                        <span class="label-icon">👥</span>
+                                        Participantes
+                                    </label>
+                                    <input type="text" id="agendaParticipantes" placeholder="joao@email.com, maria@email.com" required>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label for="agendaLocal">
+                                        <span class="label-icon">📍</span>
+                                        Local
+                                    </label>
+                                    <input type="text" id="agendaLocal" placeholder="Endereço completo" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="agendaStatus">
+                                        <span class="label-icon">📊</span>
+                                        Status
+                                    </label>
+                                    <select id="agendaStatus">
+                                        <option value="Pendente">Pendente</option>
+                                        <option value="Realizada">Realizada</option>
+                                        <option value="Cancelada">Cancelada</option>
+                                        <option value="Adiada">Adiada</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn-success btn-pulse">
+                                    <span class="icon">✓</span>
+                                    Salvar Agenda
+                                </button>
+                                <button type="button" id="cancelFormBtn" class="btn-secondary">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
-                <!-- Lista de Agendas (Admin) -->
-                <div id="adminAgendaList" class="agenda-list">
+                <!-- Lista de Agendas Admin -->
+                <div class="agenda-grid" id="adminAgendaList">
                     <!-- Cards serão gerados aqui -->
                 </div>
             </section>
@@ -81,46 +152,75 @@
             <!-- User Panel -->
             <section id="userPanel" class="panel">
                 <div class="panel-header">
-                    <h2>Minhas Agendas</h2>
+                    <div class="panel-title-group">
+                        <h2 class="panel-title">📋 Minhas Agendas</h2>
+                        <span class="panel-badge user-badge">Usuário</span>
+                    </div>
                     <div class="filter-controls">
-                        <select id="statusFilter">
-                            <option value="all">Todos</option>
-                            <option value="Pendente">Pendentes</option>
-                            <option value="Realizada">Realizadas</option>
-                            <option value="Cancelada">Canceladas</option>
-                            <option value="Adiada">Adiadas</option>
+                        <select id="statusFilter" class="filter-select">
+                            <option value="all">📊 Todos</option>
+                            <option value="Pendente">⏳ Pendentes</option>
+                            <option value="Realizada">✅ Realizadas</option>
+                            <option value="Cancelada">❌ Canceladas</option>
+                            <option value="Adiada">🔄 Adiadas</option>
                         </select>
                     </div>
                 </div>
                 
-                <!-- Lista de Agendas (User) -->
-                <div id="userAgendaList" class="agenda-list">
+                <!-- Lista de Agendas User -->
+                <div class="agenda-grid" id="userAgendaList">
                     <!-- Cards serão gerados aqui -->
                 </div>
             </section>
         </main>
 
-        <!-- Modal para Adiamento -->
-        <div id="rescheduleModal" class="modal hidden">
-            <div class="modal-content">
+        <!-- Floating Action Button -->
+        <button id="fabButton" class="fab">
+            <span class="fab-icon">+</span>
+        </button>
+
+        <!-- Modal de Adiamento -->
+        <div id="rescheduleModal" class="modal-overlay hidden">
+            <div class="modal-glass">
                 <div class="modal-header">
-                    <h3>Solicitar Adiamento</h3>
-                    <button class="modal-close">&times;</button>
+                    <h3 class="modal-title">⏰ Solicitar Adiamento</h3>
+                    <button class="modal-close-btn">
+                        <span class="icon">✕</span>
+                    </button>
                 </div>
-                <form id="rescheduleForm">
+                <form id="rescheduleForm" class="modern-form">
                     <div class="form-group">
-                        <label for="novaData">Nova Data</label>
+                        <label for="novaData">
+                            <span class="label-icon">📅</span>
+                            Nova Data
+                        </label>
                         <input type="date" id="novaData" required>
                     </div>
                     <div class="form-group">
-                        <label for="novoHorario">Novo Horário</label>
+                        <label for="novoHorario">
+                            <span class="label-icon">⏰</span>
+                            Novo Horário
+                        </label>
                         <input type="time" id="novoHorario" required>
                     </div>
                     <div class="form-actions">
-                        <button type="submit" class="btn-success">Solicitar Adiamento</button>
-                        <button type="button" class="btn-danger modal-close">Cancelar</button>
+                        <button type="submit" class="btn-success btn-pulse">
+                            <span class="icon">📤</span>
+                            Enviar Solicitação
+                        </button>
+                        <button type="button" class="btn-secondary modal-close-btn">
+                            Cancelar
+                        </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast hidden">
+            <div class="toast-content">
+                <span class="toast-icon">✅</span>
+                <span class="toast-message"></span>
             </div>
         </div>
     </div>
